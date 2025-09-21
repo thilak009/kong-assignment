@@ -3,6 +3,22 @@ run:
 	@echo -e "🚀 Running the application..."
 	@go run *.go
 
+## TEST COMMANDS
+test:
+	@echo -e "🧪 Running all tests..."
+	@go test ./tests/... -v
+
+test-coverage:
+	@echo -e "📊 Running tests with coverage..."
+	@go test ./tests/... -v -coverprofile=coverage.out
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo -e "✅ Coverage report generated at coverage.html"
+
+test-clean:
+	@echo -e "🧹 Cleaning test artifacts..."
+	@rm -f coverage.out coverage.html
+	@echo -e "✅ Test artifacts cleaned!"
+
 ## INSTALL SWAG CLI TOOL & PACKAGES
 install_swag:
 	@echo -e "📥 Installing Swag CLI and dependencies..."

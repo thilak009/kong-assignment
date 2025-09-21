@@ -20,6 +20,22 @@ func Init(opts ...gorm.Option) {
 	}
 }
 
+
+// RunMigrations runs database migrations for provided models
+func RunMigrations(models ...interface{}) error {
+	if db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Auto-migrate all provided models
+	err := db.AutoMigrate(models...)
+	if err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return nil
+}
+
 func GetDB() *gorm.DB {
 	return db
 }

@@ -8,6 +8,7 @@ import (
 
 	db "github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/models"
+	"github.com/thilak009/kong-assignment/routes"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -16,7 +17,6 @@ import (
 	"github.com/joho/godotenv"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/thilak009/kong-assignment/controllers"
 	_ "github.com/thilak009/kong-assignment/docs"
 	"github.com/thilak009/kong-assignment/forms"
 )
@@ -96,28 +96,11 @@ func main() {
 	// improves like operation efficiency for search
 	db.GetDB().Exec("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
 
-	db.GetDB().AutoMigrate(&models.Service{}, &models.ServiceVersion{})
+	// Run migrations
+	db.RunMigrations(&models.Service{}, &models.ServiceVersion{})
 
-	v1 := r.Group("/v1")
-	{
-		/*** Service ***/
-		service := new(controllers.ServiceController)
-
-		v1.POST("/services", service.Create)
-		v1.GET("/services", service.All)
-		v1.GET("/services/:id", service.One)
-		v1.PUT("/services/:id", service.Update)
-		v1.DELETE("/services/:id", service.Delete)
-
-		/*** Service Version ***/
-		serviceVersion := new(controllers.ServiceVersionController)
-
-		v1.POST("/services/:id/versions", serviceVersion.Create)
-		v1.GET("/services/:id/versions", serviceVersion.All)
-		v1.GET("/services/:id/versions/:versionId", serviceVersion.One)
-		v1.PATCH("/services/:id/versions/:versionId", serviceVersion.Update)
-		v1.DELETE("/services/:id/versions/:versionId", serviceVersion.Delete)
-	}
+	// Setup API routes
+	routes.SetupRoutes(r)
 
 	// Swagger docs
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
