@@ -47,6 +47,42 @@ definitions:
       type:
         type: string
     type: object
+  models.PaginatedResult-models_Service:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Service'
+        type: array
+      meta:
+        properties:
+          currentPage:
+            type: integer
+          nextPage:
+            type: integer
+          totalCount:
+            type: integer
+          totalPages:
+            type: integer
+        type: object
+    type: object
+  models.PaginatedResult-models_ServiceVersion:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.ServiceVersion'
+        type: array
+      meta:
+        properties:
+          currentPage:
+            type: integer
+          nextPage:
+            type: integer
+          totalCount:
+            type: integer
+          totalPages:
+            type: integer
+        type: object
+    type: object
   models.Service:
     properties:
       createdAt:
@@ -109,24 +145,30 @@ paths:
         name: q
         type: string
       - description: Sort order for the list of services. Accepted values are asc
-          and desc. Default is desc
+          and desc. Default is desc(assumes default on invalid values as well)
         in: query
         name: sort
         type: string
       - description: The field on which sorting to be applied, supports name, created_at,
-          updated_at. Default is updated_at
+          updated_at. Default is updated_at(assumes default on invalid values as well)
         in: query
         name: sort_by
         type: string
+      - description: Page number for pagination (0-based). Default is 0
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page. Default is 10, max is 100
+        in: query
+        name: per_page
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.Service'
-            type: array
+            $ref: '#/definitions/models.PaginatedResult-models_Service'
         "500":
           description: Internal Server Error
           schema:
@@ -269,15 +311,23 @@ paths:
         name: q
         type: string
       - description: Sort order for the list of service versions. Accepted values
-          are asc and desc. Default is desc
+          are asc and desc. Default is desc(assumes default on invalid values as well)
         in: query
         name: sort
         type: string
       - description: The field on which sorting to be applied, supports version, created_at,
-          updated_at. Default is updated_at
+          updated_at. Default is updated_at(assumes default on invalid values as well)
         in: query
         name: sort_by
         type: string
+      - description: Page number for pagination (0-based). Default is 0
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page. Default is 10, max is 100
+        in: query
+        name: per_page
+        type: integer
       - description: Service ID
         in: path
         name: serviceId
@@ -289,9 +339,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.ServiceVersion'
-            type: array
+            $ref: '#/definitions/models.PaginatedResult-models_ServiceVersion'
         "404":
           description: Not Found
           schema:

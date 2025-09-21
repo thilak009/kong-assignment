@@ -73,10 +73,12 @@ func (ctrl ServiceVersionController) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param	q	query   string	false	"version, supports searching with version prefix, for example: passing 1 would return versions like 1.0.1,1.1.4 etc, passing 1.0 would return 1.0.3,1.0.7 etc"
-// @Param	sort	query   string	false	"Sort order for the list of service versions. Accepted values are asc and desc. Default is desc"
-// @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports version, created_at, updated_at. Default is updated_at"
+// @Param	sort	query   string	false	"Sort order for the list of service versions. Accepted values are asc and desc. Default is desc(assumes default on invalid values as well)"
+// @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports version, created_at, updated_at. Default is updated_at(assumes default on invalid values as well)"
+// @Param	page	query   int	false	"Page number for pagination (0-based). Default is 0"
+// @Param	per_page	query   int	false	"Number of items per page. Default is 10, max is 100, assumes 100 if >100 is passed"
 // @Param	serviceId	path	string	true	"Service ID"
-// @Success 	 200  {object}  []models.ServiceVersion
+// @Success 	 200  {object}  models.PaginatedResult[models.ServiceVersion]
 // @Failure      404  {object}  models.ErrorResponse
 // @Failure      500  {object} models.ErrorResponse
 // @Router /services/{serviceId}/versions [GET]
@@ -97,9 +99,10 @@ func (ctrl ServiceVersionController) All(c *gin.Context) {
 		return
 	}
 	q := c.Query("q")
-	sortBy := c.DefaultQuery("sort_by", "updated_at")
-	sort := c.DefaultQuery("sort", "desc")
-	versions, err := serviceVersionModel.All(serviceID, q, sortBy, sort)
+	sortBy, sort := models.ParseSortParams(c, models.GetServiceVersionValidSortFields(), "updated_at")
+	page, perPage := models.ParsePaginationParams(c)
+
+	versions, err := serviceVersionModel.All(serviceID, q, sortBy, sort, page, perPage)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get service versions",

@@ -3,7 +3,6 @@ package models
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,6 +31,16 @@ func (s *Service) BeforeUpdate(tx *gorm.DB) (err error) {
 
 type ServiceModel struct{}
 
+var serviceValidSortFields = map[string]bool{
+	"name":       true,
+	"created_at": true,
+	"updated_at": true,
+}
+
+func GetServiceValidSortFields() map[string]bool {
+	return serviceValidSortFields
+}
+
 func (m ServiceModel) Create(form forms.CreateServiceForm) (service Service, err error) {
 	db := db.GetDB()
 	service = Service{
@@ -55,9 +64,9 @@ func (m ServiceModel) One(id string) (service Service, isFound bool, err error) 
 	return service, true, err
 }
 
-func (m ServiceModel) All(q string, sortBy string, sort string) (services []Service, err error) {
+func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[Service], err error) {
 	db := db.GetDB()
-	services = make([]Service, 0) // Initialize as empty slice instead of nil
+	services := make([]*Service, 0) // Initialize as empty slice of pointers
 	tx := db.Model(&Service{})
 
 	// Search filter
@@ -65,27 +74,22 @@ func (m ServiceModel) All(q string, sortBy string, sort string) (services []Serv
 		tx = tx.Where("name ILIKE ?", fmt.Sprintf("%%%s%%", q))
 	}
 
-	// Sorting with validation
-	validSortFields := map[string]bool{
-		"name":       true,
-		"created_at": true,
-		"updated_at": true,
-	}
-	validSortOrder := map[string]bool{
-		"asc":  true,
-		"desc": true,
+	// Get total count for pagination
+	var totalCount int64
+	if err := tx.Count(&totalCount).Error; err != nil {
+		return PaginatedResult[Service]{}, err
 	}
 
-	if validSortFields[sortBy] && validSortOrder[sort] {
-		tx = tx.Order(fmt.Sprintf("%s %s", sortBy, strings.ToUpper(sort)))
-	} else {
-		tx = tx.Order("updated_at DESC") // default
+	// Apply sorting, validation and defaults are handled at API layer
+	tx = tx.Order(fmt.Sprintf("%s %s", sortBy, sort))
+
+	// Pagination
+	offset := page * limit
+	if err := tx.Limit(limit).Offset(offset).Find(&services).Error; err != nil {
+		return PaginatedResult[Service]{}, err
 	}
 
-	if err := tx.Find(&services).Error; err != nil {
-		return []Service{}, err
-	}
-	return services, err
+	return BuildPaginatedResult(services, totalCount, page, limit), nil
 }
 
 func (m ServiceModel) Update(id string, form forms.CreateServiceForm) (service Service, err error) {

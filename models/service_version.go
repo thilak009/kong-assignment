@@ -3,7 +3,6 @@ package models
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,6 +34,16 @@ func (sv *ServiceVersion) BeforeUpdate(tx *gorm.DB) (err error) {
 
 type ServiceVersionModel struct{}
 
+var serviceVersionValidSortFields = map[string]bool{
+	"version":    true,
+	"created_at": true,
+	"updated_at": true,
+}
+
+func GetServiceVersionValidSortFields() map[string]bool {
+	return serviceVersionValidSortFields
+}
+
 func (m ServiceVersionModel) Create(serviceID string, form forms.CreateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
 	db := db.GetDB()
 	serviceVersion = ServiceVersion{
@@ -60,9 +69,9 @@ func (m ServiceVersionModel) One(serviceID string, id string) (serviceVersion Se
 	return serviceVersion, true, err
 }
 
-func (m ServiceVersionModel) All(serviceID string, q string, sortBy string, sort string) (serviceVersions []ServiceVersion, err error) {
+func (m ServiceVersionModel) All(serviceID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[ServiceVersion], err error) {
 	db := db.GetDB()
-	serviceVersions = make([]ServiceVersion, 0) // Initialize as empty slice instead of nil
+	serviceVersions := make([]*ServiceVersion, 0) // Initialize as empty slice of pointers
 	tx := db.Model(&ServiceVersion{}).Where("service_id = ?", serviceID)
 
 	// Search filter
@@ -70,27 +79,22 @@ func (m ServiceVersionModel) All(serviceID string, q string, sortBy string, sort
 		tx = tx.Where("version ILIKE ?", fmt.Sprintf("%s%%", q))
 	}
 
-	// Sorting with validation
-	validSortFields := map[string]bool{
-		"version":    true,
-		"created_at": true,
-		"updated_at": true,
-	}
-	validSortOrder := map[string]bool{
-		"asc":  true,
-		"desc": true,
+	// Get total count for pagination
+	var totalCount int64
+	if err := tx.Count(&totalCount).Error; err != nil {
+		return PaginatedResult[ServiceVersion]{}, err
 	}
 
-	if validSortFields[sortBy] && validSortOrder[sort] {
-		tx = tx.Order(fmt.Sprintf("%s %s", sortBy, strings.ToUpper(sort)))
-	} else {
-		tx = tx.Order("updated_at DESC") // default
+	// Apply sorting, validation and defaults are handled at API layer
+	tx = tx.Order(fmt.Sprintf("%s %s", sortBy, sort))
+
+	// Pagination
+	offset := page * limit
+	if err := tx.Limit(limit).Offset(offset).Find(&serviceVersions).Error; err != nil {
+		return PaginatedResult[ServiceVersion]{}, err
 	}
 
-	if err := tx.Find(&serviceVersions).Error; err != nil {
-		return []ServiceVersion{}, err
-	}
-	return serviceVersions, err
+	return BuildPaginatedResult(serviceVersions, totalCount, page, limit), nil
 }
 
 func (m ServiceVersionModel) Update(serviceID string, id string, form forms.UpdateServiceVersionForm) (serviceVersion ServiceVersion, err error) {

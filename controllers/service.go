@@ -55,17 +55,19 @@ func (ctrl ServiceController) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param	q	query   string	false	"Service name, supports searching the passed string in the name of the service"
-// @Param	sort	query   string	false	"Sort order for the list of services. Accepted values are asc and desc. Default is desc"
-// @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at"
-// @Success 	 200  {object}  []models.Service
+// @Param	sort	query   string	false	"Sort order for the list of services. Accepted values are asc and desc. Default is desc(assumes default on invalid values as well)"
+// @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at(assumes default on invalid values as well)"
+// @Param	page	query   int	false	"Page number for pagination (0-based). Default is 0"
+// @Param	per_page	query   int	false	"Number of items per page. Default is 10, max is 100, assumes 100 if >100 is passed"
+// @Success 	 200  {object}  models.PaginatedResult[models.Service]
 // @Failure      500  {object}	models.ErrorResponse
 // @Router /services [GET]
 func (ctrl ServiceController) All(c *gin.Context) {
 	q := c.Query("q")
-	sortBy := c.DefaultQuery("sort_by", "updated_at")
-	sort := c.DefaultQuery("sort", "desc")
+	sortBy, sort := models.ParseSortParams(c, models.GetServiceValidSortFields(), "updated_at")
+	page, perPage := models.ParsePaginationParams(c)
 
-	results, err := serviceModel.All(q, sortBy, sort)
+	results, err := serviceModel.All(q, sortBy, sort, page, perPage)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get services",

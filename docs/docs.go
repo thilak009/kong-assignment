@@ -42,14 +42,26 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Sort order for the list of services. Accepted values are asc and desc. Default is desc",
+                        "description": "Sort order for the list of services. Accepted values are asc and desc. Default is desc(assumes default on invalid values as well)",
                         "name": "sort",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at",
+                        "description": "The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at(assumes default on invalid values as well)",
                         "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number for pagination (0-based). Default is 0",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page. Default is 10, max is 100",
+                        "name": "per_page",
                         "in": "query"
                     }
                 ],
@@ -57,10 +69,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Service"
-                            }
+                            "$ref": "#/definitions/models.PaginatedResult-models_Service"
                         }
                     },
                     "500": {
@@ -278,14 +287,26 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Sort order for the list of service versions. Accepted values are asc and desc. Default is desc",
+                        "description": "Sort order for the list of service versions. Accepted values are asc and desc. Default is desc(assumes default on invalid values as well)",
                         "name": "sort",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "The field on which sorting to be applied, supports version, created_at, updated_at. Default is updated_at",
+                        "description": "The field on which sorting to be applied, supports version, created_at, updated_at. Default is updated_at(assumes default on invalid values as well)",
                         "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number for pagination (0-based). Default is 0",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page. Default is 10, max is 100",
+                        "name": "per_page",
                         "in": "query"
                     },
                     {
@@ -300,10 +321,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.ServiceVersion"
-                            }
+                            "$ref": "#/definitions/models.PaginatedResult-models_ServiceVersion"
                         }
                     },
                     "404": {
@@ -599,6 +617,62 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "models.PaginatedResult-models_Service": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Service"
+                    }
+                },
+                "meta": {
+                    "type": "object",
+                    "properties": {
+                        "currentPage": {
+                            "type": "integer"
+                        },
+                        "nextPage": {
+                            "type": "integer"
+                        },
+                        "totalCount": {
+                            "type": "integer"
+                        },
+                        "totalPages": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "models.PaginatedResult-models_ServiceVersion": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ServiceVersion"
+                    }
+                },
+                "meta": {
+                    "type": "object",
+                    "properties": {
+                        "currentPage": {
+                            "type": "integer"
+                        },
+                        "nextPage": {
+                            "type": "integer"
+                        },
+                        "totalCount": {
+                            "type": "integer"
+                        },
+                        "totalPages": {
+                            "type": "integer"
+                        }
+                    }
                 }
             }
         },
