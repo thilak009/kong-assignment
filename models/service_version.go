@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -59,13 +60,33 @@ func (m ServiceVersionModel) One(serviceID string, id string) (serviceVersion Se
 	return serviceVersion, true, err
 }
 
-func (m ServiceVersionModel) All(serviceID string, q string) (serviceVersions []ServiceVersion, err error) {
+func (m ServiceVersionModel) All(serviceID string, q string, sortBy string, sort string) (serviceVersions []ServiceVersion, err error) {
 	db := db.GetDB()
 	serviceVersions = make([]ServiceVersion, 0) // Initialize as empty slice instead of nil
 	tx := db.Model(&ServiceVersion{}).Where("service_id = ?", serviceID)
+
+	// Search filter
 	if q != "" {
-		tx.Where("version ILIKE ?", fmt.Sprintf("%s%%", q))
+		tx = tx.Where("version ILIKE ?", fmt.Sprintf("%s%%", q))
 	}
+
+	// Sorting with validation
+	validSortFields := map[string]bool{
+		"version":    true,
+		"created_at": true,
+		"updated_at": true,
+	}
+	validSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+
+	if validSortFields[sortBy] && validSortOrder[sort] {
+		tx = tx.Order(fmt.Sprintf("%s %s", sortBy, strings.ToUpper(sort)))
+	} else {
+		tx = tx.Order("updated_at DESC") // default
+	}
+
 	if err := tx.Find(&serviceVersions).Error; err != nil {
 		return []ServiceVersion{}, err
 	}

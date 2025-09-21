@@ -55,12 +55,17 @@ func (ctrl ServiceController) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param	q	query   string	false	"Service name, supports searching the passed string in the name of the service"
+// @Param	sort	query   string	false	"Sort order for the list of services. Accepted values are asc and desc. Default is desc"
+// @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at"
 // @Success 	 200  {object}  []models.Service
 // @Failure      500  {object}	models.ErrorResponse
 // @Router /services [GET]
 func (ctrl ServiceController) All(c *gin.Context) {
 	q := c.Query("q")
-	results, err := serviceModel.All(q)
+	sortBy := c.DefaultQuery("sort_by", "updated_at")
+	sort := c.DefaultQuery("sort", "desc")
+
+	results, err := serviceModel.All(q, sortBy, sort)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get services",

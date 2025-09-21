@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,13 +55,33 @@ func (m ServiceModel) One(id string) (service Service, isFound bool, err error) 
 	return service, true, err
 }
 
-func (m ServiceModel) All(q string) (services []Service, err error) {
+func (m ServiceModel) All(q string, sortBy string, sort string) (services []Service, err error) {
 	db := db.GetDB()
 	services = make([]Service, 0) // Initialize as empty slice instead of nil
 	tx := db.Model(&Service{})
+
+	// Search filter
 	if q != "" {
-		tx.Where("name ILIKE ?", fmt.Sprintf("%%%s%%", q))
+		tx = tx.Where("name ILIKE ?", fmt.Sprintf("%%%s%%", q))
 	}
+
+	// Sorting with validation
+	validSortFields := map[string]bool{
+		"name":       true,
+		"created_at": true,
+		"updated_at": true,
+	}
+	validSortOrder := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+
+	if validSortFields[sortBy] && validSortOrder[sort] {
+		tx = tx.Order(fmt.Sprintf("%s %s", sortBy, strings.ToUpper(sort)))
+	} else {
+		tx = tx.Order("updated_at DESC") // default
+	}
+
 	if err := tx.Find(&services).Error; err != nil {
 		return []Service{}, err
 	}

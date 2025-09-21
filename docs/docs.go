@@ -39,6 +39,18 @@ const docTemplate = `{
                         "description": "Service name, supports searching the passed string in the name of the service",
                         "name": "q",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order for the list of services. Accepted values are asc and desc. Default is desc",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at",
+                        "name": "sort_by",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -262,6 +274,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "version, supports searching with version prefix, for example: passing 1 would return versions like 1.0.1,1.1.4 etc, passing 1.0 would return 1.0.3,1.0.7 etc",
                         "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order for the list of service versions. Accepted values are asc and desc. Default is desc",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "The field on which sorting to be applied, supports version, created_at, updated_at. Default is updated_at",
+                        "name": "sort_by",
                         "in": "query"
                     },
                     {

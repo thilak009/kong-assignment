@@ -73,6 +73,8 @@ func (ctrl ServiceVersionController) Create(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param	q	query   string	false	"version, supports searching with version prefix, for example: passing 1 would return versions like 1.0.1,1.1.4 etc, passing 1.0 would return 1.0.3,1.0.7 etc"
+// @Param	sort	query   string	false	"Sort order for the list of service versions. Accepted values are asc and desc. Default is desc"
+// @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports version, created_at, updated_at. Default is updated_at"
 // @Param	serviceId	path	string	true	"Service ID"
 // @Success 	 200  {object}  []models.ServiceVersion
 // @Failure      404  {object}  models.ErrorResponse
@@ -95,7 +97,9 @@ func (ctrl ServiceVersionController) All(c *gin.Context) {
 		return
 	}
 	q := c.Query("q")
-	versions, err := serviceVersionModel.All(serviceID, q)
+	sortBy := c.DefaultQuery("sort_by", "updated_at")
+	sort := c.DefaultQuery("sort", "desc")
+	versions, err := serviceVersionModel.All(serviceID, q, sortBy, sort)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get service versions",
