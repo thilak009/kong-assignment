@@ -39,7 +39,7 @@ func (ctrl ServiceVersionController) Create(c *gin.Context) {
 	}
 
 	serviceID := c.Param("id")
-	_, isFound, err := serviceModel.One(serviceID)
+	_, isFound, err := serviceModel.One(serviceID, false)
 	if err != nil {
 		if !isFound {
 			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
@@ -85,7 +85,7 @@ func (ctrl ServiceVersionController) Create(c *gin.Context) {
 func (ctrl ServiceVersionController) All(c *gin.Context) {
 	serviceID := c.Param("id")
 
-	_, isFound, err := serviceModel.One(serviceID)
+	_, isFound, err := serviceModel.One(serviceID, false)
 	if err != nil {
 		if !isFound {
 			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{

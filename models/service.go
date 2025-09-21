@@ -13,8 +13,13 @@ import (
 
 type Service struct {
 	BaseWithId
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Metadata    ServiceMetadata `json:"metadata" gorm:"-"`
+}
+
+type ServiceMetadata struct {
+	VersionCount *int `json:"versionCount,omitempty"`
 }
 
 func (s *Service) BeforeCreate(tx *gorm.DB) (err error) {
@@ -56,15 +61,26 @@ func (m ServiceModel) Create(form forms.CreateServiceForm) (service Service, err
 // returns isFound as false when there is either an error running the query or if the record is not found
 // caller must first check if err is not nil to know whether it is a record not found error
 // or some other error and not directly rely on isFound for record not found case
-func (m ServiceModel) One(id string) (service Service, isFound bool, err error) {
+func (m ServiceModel) One(id string, includeVersionCount bool) (service Service, isFound bool, err error) {
 	db := db.GetDB()
 	if err := db.Model(&Service{}).Where("id = ?", id).First(&service).Error; err != nil {
 		return Service{}, !errors.Is(err, gorm.ErrRecordNotFound), err
 	}
-	return service, true, err
+
+	// Populate version count (only if requested)
+	if includeVersionCount {
+		var versionCount int64
+		if err := db.Model(&ServiceVersion{}).Where("service_id = ?", service.ID).Count(&versionCount).Error; err != nil {
+			return Service{}, true, err
+		}
+		versionCountInt := int(versionCount)
+		service.Metadata.VersionCount = &versionCountInt
+	}
+
+	return service, true, nil
 }
 
-func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[Service], err error) {
+func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit int, includeVersionCount bool) (result PaginatedResult[Service], err error) {
 	db := db.GetDB()
 	services := make([]*Service, 0) // Initialize as empty slice of pointers
 	tx := db.Model(&Service{})
@@ -87,6 +103,41 @@ func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit 
 	offset := page * limit
 	if err := tx.Limit(limit).Offset(offset).Find(&services).Error; err != nil {
 		return PaginatedResult[Service]{}, err
+	}
+
+	// Populate version counts for all services efficiently (only if requested)
+	if includeVersionCount && len(services) > 0 {
+		// Get all service IDs
+		serviceIds := make([]string, len(services))
+		for i, service := range services {
+			serviceIds[i] = service.ID
+		}
+
+		// Single query to get all version counts
+		type VersionCount struct {
+			ServiceID string `gorm:"column:service_id"`
+			Count     int64  `gorm:"column:count"`
+		}
+
+		var versionCounts []VersionCount
+		if err := db.Model(&ServiceVersion{}).
+			Select("service_id, COUNT(*) as count").
+			Where("service_id IN ?", serviceIds).
+			Group("service_id").
+			Scan(&versionCounts).Error; err != nil {
+			return PaginatedResult[Service]{}, err
+		}
+
+		countMap := make(map[string]int64)
+		for _, vc := range versionCounts {
+			countMap[vc.ServiceID] = vc.Count
+		}
+
+		// Assign counts to services
+		for _, service := range services {
+			versionCountInt := int(countMap[service.ID])
+			service.Metadata.VersionCount = &versionCountInt
+		}
 	}
 
 	return BuildPaginatedResult(services, totalCount, page, limit), nil

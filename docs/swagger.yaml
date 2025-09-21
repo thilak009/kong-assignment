@@ -94,10 +94,17 @@ definitions:
         type: string
       id:
         type: string
+      metadata:
+        $ref: '#/definitions/models.ServiceMetadata'
       name:
         type: string
       updatedAt:
         type: string
+    type: object
+  models.ServiceMetadata:
+    properties:
+      versionCount:
+        type: integer
     type: object
   models.ServiceVersion:
     properties:
@@ -158,10 +165,16 @@ paths:
         in: query
         name: page
         type: integer
-      - description: Number of items per page. Default is 10, max is 100
+      - description: Number of items per page. Default is 10, max is 100, assumes
+          100 if >100 is passed
         in: query
         name: per_page
         type: integer
+      - description: 'Additional data to include (comma-separated). Supported values:
+          versionCount'
+        in: query
+        name: include
+        type: string
       produces:
       - application/json
       responses:
@@ -241,6 +254,11 @@ paths:
         in: path
         name: id
         required: true
+        type: string
+      - description: 'Additional data to include (comma-separated). Supported values:
+          versionCount'
+        in: query
+        name: include
         type: string
       produces:
       - application/json
@@ -324,7 +342,8 @@ paths:
         in: query
         name: page
         type: integer
-      - description: Number of items per page. Default is 10, max is 100
+      - description: Number of items per page. Default is 10, max is 100, assumes
+          100 if >100 is passed
         in: query
         name: per_page
         type: integer

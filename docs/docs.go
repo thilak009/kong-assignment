@@ -60,8 +60,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Number of items per page. Default is 10, max is 100",
+                        "description": "Number of items per page. Default is 10, max is 100, assumes 100 if \u003e100 is passed",
                         "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Additional data to include (comma-separated). Supported values: versionCount",
+                        "name": "include",
                         "in": "query"
                     }
                 ],
@@ -145,6 +151,12 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Additional data to include (comma-separated). Supported values: versionCount",
+                        "name": "include",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -305,7 +317,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Number of items per page. Default is 10, max is 100",
+                        "description": "Number of items per page. Default is 10, max is 100, assumes 100 if \u003e100 is passed",
                         "name": "per_page",
                         "in": "query"
                     },
@@ -689,11 +701,22 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "metadata": {
+                    "$ref": "#/definitions/models.ServiceMetadata"
+                },
                 "name": {
                     "type": "string"
                 },
                 "updatedAt": {
                     "type": "string"
+                }
+            }
+        },
+        "models.ServiceMetadata": {
+            "type": "object",
+            "properties": {
+                "versionCount": {
+                    "type": "integer"
                 }
             }
         },

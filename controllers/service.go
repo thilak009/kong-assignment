@@ -5,6 +5,7 @@ import (
 	"github.com/thilak009/kong-assignment/models"
 
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +14,21 @@ type ServiceController struct{}
 
 var serviceModel = new(models.ServiceModel)
 var serviceForm = new(forms.ServiceForm)
+
+// parseIncludeParams parses comma-separated include parameter and returns flags for each supported field
+func parseIncludeParams(include string) (includeVersionCount bool) {
+	if include == "" {
+		return false
+	}
+
+	includeFields := strings.Split(include, ",")
+	for _, field := range includeFields {
+		if strings.TrimSpace(field) == "versionCount" {
+			includeVersionCount = true
+		}
+	}
+	return includeVersionCount
+}
 
 // Create Service godoc
 // @Summary Create a service
@@ -59,6 +75,7 @@ func (ctrl ServiceController) Create(c *gin.Context) {
 // @Param	sort_by	query   string	false	"The field on which sorting to be applied, supports name, created_at, updated_at. Default is updated_at(assumes default on invalid values as well)"
 // @Param	page	query   int	false	"Page number for pagination (0-based). Default is 0"
 // @Param	per_page	query   int	false	"Number of items per page. Default is 10, max is 100, assumes 100 if >100 is passed"
+// @Param	include	query   string	false	"Additional data to include (comma-separated). Supported values: versionCount"
 // @Success 	 200  {object}  models.PaginatedResult[models.Service]
 // @Failure      500  {object}	models.ErrorResponse
 // @Router /services [GET]
@@ -67,7 +84,11 @@ func (ctrl ServiceController) All(c *gin.Context) {
 	sortBy, sort := models.ParseSortParams(c, models.GetServiceValidSortFields(), "updated_at")
 	page, perPage := models.ParsePaginationParams(c)
 
-	results, err := serviceModel.All(q, sortBy, sort, page, perPage)
+	// Parse include parameter for multiple values
+	include := c.Query("include")
+	includeVersionCount := parseIncludeParams(include)
+
+	results, err := serviceModel.All(q, sortBy, sort, page, perPage, includeVersionCount)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get services",
@@ -86,13 +107,19 @@ func (ctrl ServiceController) All(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param	id	path	string	true	"Service ID"
+// @Param	include	query   string	false	"Additional data to include (comma-separated). Supported values: versionCount"
 // @Success 	 200  {object}  models.Service
 // @Failure      404  {object}  models.ErrorResponse
 // @Failure      500  {object}  models.ErrorResponse
 // @Router /services/{id} [GET]
 func (ctrl ServiceController) One(c *gin.Context) {
 	id := c.Param("id")
-	data, isFound, err := serviceModel.One(id)
+
+	// Parse include parameter for multiple values
+	include := c.Query("include")
+	includeVersionCount := parseIncludeParams(include)
+
+	data, isFound, err := serviceModel.One(id, includeVersionCount)
 	if err != nil {
 		if !isFound {
 			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
@@ -134,7 +161,7 @@ func (ctrl ServiceController) Update(c *gin.Context) {
 	}
 
 	id := c.Param("id")
-	_, isFound, err := serviceModel.One(id)
+	_, isFound, err := serviceModel.One(id, false)
 	if err != nil {
 		if !isFound {
 			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
@@ -172,7 +199,7 @@ func (ctrl ServiceController) Update(c *gin.Context) {
 // @Router /services/{id} [DELETE]
 func (ctrl ServiceController) Delete(c *gin.Context) {
 	id := c.Param("id")
-	_, isFound, err := serviceModel.One(id)
+	_, isFound, err := serviceModel.One(id, false)
 	if err != nil {
 		if !isFound {
 			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
