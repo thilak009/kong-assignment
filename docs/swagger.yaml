@@ -1,0 +1,422 @@
+basePath: /v1
+definitions:
+  forms.CreateServiceForm:
+    properties:
+      description:
+        maxLength: 1000
+        minLength: 10
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+    required:
+    - description
+    - name
+    type: object
+  forms.CreateServiceVersionForm:
+    properties:
+      description:
+        maxLength: 1000
+        minLength: 10
+        type: string
+      releaseTimestamp:
+        type: string
+      version:
+        type: string
+    required:
+    - description
+    - version
+    type: object
+  forms.UpdateServiceVersionForm:
+    properties:
+      description:
+        maxLength: 1000
+        minLength: 10
+        type: string
+      releaseTimestamp:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      details: {}
+      message:
+        type: string
+      traceId:
+        type: string
+      type:
+        type: string
+    type: object
+  models.Service:
+    properties:
+      createdAt:
+        description: |-
+          gorm:"<-:create" only allows create and read but not update
+          this is avoid updating created_at with a zero value by mistake
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.ServiceVersion:
+    properties:
+      createdAt:
+        description: |-
+          gorm:"<-:create" only allows create and read but not update
+          this is avoid updating created_at with a zero value by mistake
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      releaseTimestamp:
+        type: string
+      serviceVersionId:
+        type: string
+      updatedAt:
+        type: string
+      version:
+        type: string
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:9000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API server for the Konnect Platform
+  termsOfService: http://swagger.io/terms/
+  title: Konnect
+  version: "1.0"
+paths:
+  /services:
+    get:
+      consumes:
+      - application/json
+      description: Gets all the services available
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Service'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get All services
+      tags:
+      - Service
+    post:
+      consumes:
+      - application/json
+      description: Creates a service
+      parameters:
+      - description: Service
+        in: body
+        name: service
+        required: true
+        schema:
+          $ref: '#/definitions/forms.CreateServiceForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a service
+      tags:
+      - Service
+  /services/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the specified service
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ""
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a service
+      tags:
+      - Service
+    get:
+      consumes:
+      - application/json
+      description: Gets the specified service
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Service'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a service
+      tags:
+      - Service
+    put:
+      consumes:
+      - application/json
+      description: Updates the specified service
+      parameters:
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Service
+        in: body
+        name: service
+        required: true
+        schema:
+          $ref: '#/definitions/forms.CreateServiceForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Service'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a service
+      tags:
+      - Service
+  /services/{serviceId}/versions:
+    get:
+      consumes:
+      - application/json
+      description: Gets all the versions available for the specified service
+      parameters:
+      - description: Service ID
+        in: path
+        name: serviceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.ServiceVersion'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get All versions of a service
+      tags:
+      - ServiceVersion
+    post:
+      consumes:
+      - application/json
+      description: Creates a version for the specified service
+      parameters:
+      - description: Service ID
+        in: path
+        name: serviceId
+        required: true
+        type: string
+      - description: ServiceVersion
+        in: body
+        name: serviceVersion
+        required: true
+        schema:
+          $ref: '#/definitions/forms.CreateServiceVersionForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ServiceVersion'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a version for a service
+      tags:
+      - ServiceVersion
+  /services/{serviceId}/versions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the specified version of a service
+      parameters:
+      - description: Service ID
+        in: path
+        name: serviceId
+        required: true
+        type: string
+      - description: Service Version ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ""
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a version for a service
+      tags:
+      - ServiceVersion
+    get:
+      consumes:
+      - application/json
+      description: Get particular version by id for the specified service
+      parameters:
+      - description: Service ID
+        in: path
+        name: serviceId
+        required: true
+        type: string
+      - description: Service Version ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ServiceVersion'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a version of a service
+      tags:
+      - ServiceVersion
+    patch:
+      consumes:
+      - application/json
+      description: Updates the specified version of a service, version tag cannot
+        be updated
+      parameters:
+      - description: Service ID
+        in: path
+        name: serviceId
+        required: true
+        type: string
+      - description: Service Version ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ServiceVersion
+        in: body
+        name: serviceVersion
+        required: true
+        schema:
+          $ref: '#/definitions/forms.UpdateServiceVersionForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ServiceVersion'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a version for a service
+      tags:
+      - ServiceVersion
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

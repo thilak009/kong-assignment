@@ -1,0 +1,234 @@
+package controllers
+
+import (
+	"github.com/thilak009/kong-assignment/forms"
+	"github.com/thilak009/kong-assignment/models"
+
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+type ServiceVersionController struct{}
+
+var serviceVersionModel = new(models.ServiceVersionModel)
+var serviceVersionForm = new(forms.ServiceVersionForm)
+
+// Create ServiceVersion godoc
+// @Summary Create a version for a service
+// @Schemes
+// @Description Creates a version for the specified service
+// @Description version value must be a semantic version and releaseTimestamp must be valid RFC3339 timestamp
+// @Tags ServiceVersion
+// @Accept json
+// @Produce json
+// @Param	serviceId	path	string	true	"Service ID"
+// @Param serviceVersion body forms.CreateServiceVersionForm true "ServiceVersion"
+// @Success 	 200  {object}  models.ServiceVersion
+// @Failure      400  {object}  models.ErrorResponse
+// @Failure      500  {object} models.ErrorResponse
+// @Router /services/{serviceId}/versions [post]
+func (ctrl ServiceVersionController) Create(c *gin.Context) {
+	var form forms.CreateServiceVersionForm
+	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
+		message := serviceVersionForm.Create(validationErr)
+		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Message: message,
+		})
+		return
+	}
+
+	serviceID := c.Param("id")
+	_, isFound, err := serviceModel.One(serviceID)
+	if err != nil {
+		if !isFound {
+			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Message: "Service not found",
+			})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not get versions",
+		})
+		return
+	}
+
+	// TODO: handle same version tag creation by returning a bad request maybe
+	version, err := serviceVersionModel.Create(serviceID, form)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Service version could not be created",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, version)
+}
+
+// Get All ServiceVersions godoc
+// @Summary Get All versions of a service
+// @Schemes
+// @Description Gets all the versions available for the specified service
+// @Tags ServiceVersion
+// @Accept json
+// @Produce json
+// @Param	serviceId	path	string	true	"Service ID"
+// @Success 	 200  {object}  []models.ServiceVersion
+// @Failure      404  {object}  models.ErrorResponse
+// @Failure      500  {object} models.ErrorResponse
+// @Router /services/{serviceId}/versions [GET]
+func (ctrl ServiceVersionController) All(c *gin.Context) {
+	serviceID := c.Param("id")
+
+	_, isFound, err := serviceModel.One(serviceID)
+	if err != nil {
+		if !isFound {
+			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Message: "Service not found",
+			})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not get versions",
+		})
+		return
+	}
+
+	versions, err := serviceVersionModel.All(serviceID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not get service versions",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, versions)
+}
+
+// Get One ServiceVersion godoc
+// @Summary Get a version of a service
+// @Schemes
+// @Description Get particular version by id for the specified service
+// @Tags ServiceVersion
+// @Accept json
+// @Produce json
+// @Param	serviceId	path	string	true	"Service ID"
+// @Param	id	path	string	true	"Service Version ID"
+// @Success 	 200  {object}  models.ServiceVersion
+// @Failure      404  {object}  models.ErrorResponse
+// @Failure      500  {object} models.ErrorResponse
+// @Router /services/{serviceId}/versions/{id} [GET]
+func (ctrl ServiceVersionController) One(c *gin.Context) {
+	serviceID := c.Param("id")
+	id := c.Param("versionId")
+
+	version, isFound, err := serviceVersionModel.One(serviceID, id)
+	if err != nil {
+		if !isFound {
+			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Message: "Service version not found",
+			})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not get version",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, version)
+}
+
+// Update ServiceVersion godoc
+// @Summary Update a version for a service
+// @Schemes
+// @Description Updates the specified version of a service, version tag cannot be updated
+// @Tags ServiceVersion
+// @Accept json
+// @Produce json
+// @Param	serviceId	path	string	true	"Service ID"
+// @Param	id	path	string	true	"Service Version ID"
+// @Param serviceVersion body forms.UpdateServiceVersionForm true "ServiceVersion"
+// @Success 	 200  {object}  models.ServiceVersion
+// @Failure      400  {object}  models.ErrorResponse
+// @Failure      404  {object}  models.ErrorResponse
+// @Failure      500  {object} models.ErrorResponse
+// @Router /services/{serviceId}/versions/{id} [PATCH]
+func (ctrl ServiceVersionController) Update(c *gin.Context) {
+	var form forms.UpdateServiceVersionForm
+	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
+		message := serviceVersionForm.Update(validationErr)
+		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
+			Message: message,
+		})
+		return
+	}
+
+	serviceID := c.Param("id")
+	id := c.Param("versionId")
+
+	_, isFound, err := serviceVersionModel.One(serviceID, id)
+	if err != nil {
+		if !isFound {
+			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Message: "Service version not found",
+			})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not get version",
+		})
+		return
+	}
+
+	version, err := serviceVersionModel.Update(serviceID, id, form)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Service version could not be updated",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, version)
+}
+
+// Delete ServiceVersion godoc
+// @Summary Delete a version for a service
+// @Schemes
+// @Description Deletes the specified version of a service
+// @Tags ServiceVersion
+// @Accept json
+// @Produce json
+// @Param	serviceId	path	string	true	"Service ID"
+// @Param	id	path	string	true	"Service Version ID"
+// @Success 	 204  ""
+// @Success 	 404  {object} models.ErrorResponse
+// @Failure      500  {object} models.ErrorResponse
+// @Router /services/{serviceId}/versions/{id} [DELETE]
+func (ctrl ServiceVersionController) Delete(c *gin.Context) {
+	serviceID := c.Param("id")
+	id := c.Param("versionId")
+
+	_, isFound, err := serviceVersionModel.One(serviceID, id)
+	if err != nil {
+		if !isFound {
+			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
+				Message: "Service version not found",
+			})
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Could not get version",
+		})
+		return
+	}
+
+	err = serviceVersionModel.Delete(serviceID, id)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Service version could not be deleted",
+		})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, "")
+}
