@@ -54,11 +54,13 @@ func (ctrl ServiceController) Create(c *gin.Context) {
 // @Tags Service
 // @Accept json
 // @Produce json
+// @Param	q	query   string	false	"Service name, supports searching the passed string in the name of the service"
 // @Success 	 200  {object}  []models.Service
 // @Failure      500  {object}	models.ErrorResponse
 // @Router /services [GET]
 func (ctrl ServiceController) All(c *gin.Context) {
-	results, err := serviceModel.All()
+	q := c.Query("q")
+	results, err := serviceModel.All(q)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get services",

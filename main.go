@@ -92,6 +92,10 @@ func main() {
 
 	//Start PostgreSQL database
 	db.Init()
+	// create the https://www.postgresql.org/docs/current/pgtrgm.html extension before doing auto migrate
+	// improves like operation efficiency for search
+	db.GetDB().Exec("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+
 	db.GetDB().AutoMigrate(&models.Service{}, &models.ServiceVersion{})
 
 	v1 := r.Group("/v1")

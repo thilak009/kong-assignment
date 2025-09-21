@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -58,10 +59,14 @@ func (m ServiceVersionModel) One(serviceID string, id string) (serviceVersion Se
 	return serviceVersion, true, err
 }
 
-func (m ServiceVersionModel) All(serviceID string) (serviceVersions []ServiceVersion, err error) {
+func (m ServiceVersionModel) All(serviceID string, q string) (serviceVersions []ServiceVersion, err error) {
 	db := db.GetDB()
 	serviceVersions = make([]ServiceVersion, 0) // Initialize as empty slice instead of nil
-	if err := db.Model(&ServiceVersion{}).Where("service_id = ?", serviceID).Find(&serviceVersions).Error; err != nil {
+	tx := db.Model(&ServiceVersion{}).Where("service_id = ?", serviceID)
+	if q != "" {
+		tx.Where("version ILIKE ?", fmt.Sprintf("%s%%", q))
+	}
+	if err := tx.Find(&serviceVersions).Error; err != nil {
 		return []ServiceVersion{}, err
 	}
 	return serviceVersions, err

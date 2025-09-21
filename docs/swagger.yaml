@@ -76,7 +76,7 @@ definitions:
         type: string
       releaseTimestamp:
         type: string
-      serviceVersionId:
+      serviceId:
         type: string
       updatedAt:
         type: string
@@ -102,6 +102,12 @@ paths:
       consumes:
       - application/json
       description: Gets all the services available
+      parameters:
+      - description: Service name, supports searching the passed string in the name
+          of the service
+        in: query
+        name: q
+        type: string
       produces:
       - application/json
       responses:
@@ -246,6 +252,12 @@ paths:
       - application/json
       description: Gets all the versions available for the specified service
       parameters:
+      - description: 'version, supports searching with version prefix, for example:
+          passing 1 would return versions like 1.0.1,1.1.4 etc, passing 1.0 would
+          return 1.0.3,1.0.7 etc'
+        in: query
+        name: q
+        type: string
       - description: Service ID
         in: path
         name: serviceId
@@ -274,7 +286,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a version for the specified service
+      description: |-
+        Creates a version for the specified service
+        version value must be a semantic version and releaseTimestamp must be valid RFC3339 timestamp
       parameters:
       - description: Service ID
         in: path

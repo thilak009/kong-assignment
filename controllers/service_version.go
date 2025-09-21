@@ -72,6 +72,7 @@ func (ctrl ServiceVersionController) Create(c *gin.Context) {
 // @Tags ServiceVersion
 // @Accept json
 // @Produce json
+// @Param	q	query   string	false	"version, supports searching with version prefix, for example: passing 1 would return versions like 1.0.1,1.1.4 etc, passing 1.0 would return 1.0.3,1.0.7 etc"
 // @Param	serviceId	path	string	true	"Service ID"
 // @Success 	 200  {object}  []models.ServiceVersion
 // @Failure      404  {object}  models.ErrorResponse
@@ -93,8 +94,8 @@ func (ctrl ServiceVersionController) All(c *gin.Context) {
 		})
 		return
 	}
-
-	versions, err := serviceVersionModel.All(serviceID)
+	q := c.Query("q")
+	versions, err := serviceVersionModel.All(serviceID, q)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
 			Message: "Could not get service versions",

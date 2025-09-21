@@ -33,6 +33,14 @@ const docTemplate = `{
                     "Service"
                 ],
                 "summary": "Get All services",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service name, supports searching the passed string in the name of the service",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -252,6 +260,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "description": "version, supports searching with version prefix, for example: passing 1 would return versions like 1.0.1,1.1.4 etc, passing 1.0 would return 1.0.3,1.0.7 etc",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "Service ID",
                         "name": "serviceId",
                         "in": "path",
@@ -283,7 +297,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Creates a version for the specified service",
+                "description": "Creates a version for the specified service\nversion value must be a semantic version and releaseTimestamp must be valid RFC3339 timestamp",
                 "consumes": [
                     "application/json"
                 ],
@@ -601,7 +615,7 @@ const docTemplate = `{
                 "releaseTimestamp": {
                     "type": "string"
                 },
-                "serviceVersionId": {
+                "serviceId": {
                     "type": "string"
                 },
                 "updatedAt": {
