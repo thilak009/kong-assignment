@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/thilak009/kong-assignment/models"
@@ -51,6 +52,37 @@ func (h *TestHelpers) MakeRequest(method, path string, body interface{}) (*httpt
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+
+	recorder := httptest.NewRecorder()
+	GetTestRouter().ServeHTTP(recorder, req)
+
+	return recorder, nil
+}
+
+// MakeAuthenticatedRequest makes an authenticated HTTP request to the test server
+func (h *TestHelpers) MakeAuthenticatedRequest(method, path string, body interface{}, token string) (*httptest.ResponseRecorder, error) {
+	h.ensureTestEnvironment()
+	var reqBody io.Reader
+
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+		}
+		reqBody = bytes.NewBuffer(jsonBody)
+	}
+
+	req, err := http.NewRequest(method, path, reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	// Add Authorization header
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	recorder := httptest.NewRecorder()
 	GetTestRouter().ServeHTTP(recorder, req)
@@ -121,39 +153,126 @@ func (h *TestHelpers) CleanupDatabase() {
 	// Clean tables in reverse order of dependencies
 	testDB.Exec("DELETE FROM service_versions")
 	testDB.Exec("DELETE FROM services")
+	testDB.Exec("DELETE FROM user_organization_maps")
+	testDB.Exec("DELETE FROM organizations")
+	testDB.Exec("DELETE FROM users")
+}
+
+// CreateTestUser creates a test user and returns user and token
+func (h *TestHelpers) CreateTestUser(email, name, password string) (*models.User, string) {
+	h.ensureTestEnvironment()
+
+	// Register user
+	payload := map[string]interface{}{
+		"email":    email,
+		"name":     name,
+		"password": password,
+	}
+
+	resp, err := h.MakeRequest("POST", "/v1/user/register", payload)
+	if err != nil {
+		h.t.Fatalf("Failed to register test user: %v", err)
+	}
+
+	if resp.Code != http.StatusCreated {
+		h.t.Fatalf("Failed to register test user, status: %d, body: %s", resp.Code, resp.Body.String())
+	}
+
+	var user models.User
+	h.AssertJSONResponse(resp, &user)
+
+	// Login to get token
+	loginPayload := map[string]interface{}{
+		"email":    email,
+		"password": password,
+	}
+
+	loginResp, err := h.MakeRequest("POST", "/v1/user/login", loginPayload)
+	if err != nil {
+		h.t.Fatalf("Failed to login test user: %v", err)
+	}
+
+	if loginResp.Code != http.StatusOK {
+		h.t.Fatalf("Failed to login test user, status: %d, body: %s", loginResp.Code, loginResp.Body.String())
+	}
+
+	var loginResponse models.TokenResponse
+	h.AssertJSONResponse(loginResp, &loginResponse)
+
+	return &user, loginResponse.AccessToken
+}
+
+// CreateTestOrganization creates a test organization
+func (h *TestHelpers) CreateTestOrganization(token, name, description string) *models.Organization {
+	h.ensureTestEnvironment()
+
+	payload := map[string]interface{}{
+		"name":        name,
+		"description": description,
+	}
+
+	resp, err := h.MakeAuthenticatedRequest("POST", "/v1/orgs", payload, token)
+	if err != nil {
+		h.t.Fatalf("Failed to create test organization: %v", err)
+	}
+
+	if resp.Code != http.StatusCreated {
+		h.t.Fatalf("Failed to create test organization, status: %d, body: %s", resp.Code, resp.Body.String())
+	}
+
+	var org models.Organization
+	h.AssertJSONResponse(resp, &org)
+
+	return &org
 }
 
 // CreateTestService creates a test service in the database
-func (h *TestHelpers) CreateTestService(name, description string) *models.Service {
+func (h *TestHelpers) CreateTestService(token, orgID, name, description string) *models.Service {
 	h.ensureTestEnvironment()
-	service := &models.Service{
-		Name:        name,
-		Description: description,
+
+	payload := map[string]interface{}{
+		"name":        name,
+		"description": description,
 	}
 
-	testDB := GetTestDB()
-	if err := testDB.Create(service).Error; err != nil {
+	resp, err := h.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services", orgID), payload, token)
+	if err != nil {
 		h.t.Fatalf("Failed to create test service: %v", err)
 	}
 
-	return service
+	if resp.Code != http.StatusOK {
+		h.t.Fatalf("Failed to create test service, status: %d, body: %s", resp.Code, resp.Body.String())
+	}
+
+	var service models.Service
+	h.AssertJSONResponse(resp, &service)
+
+	return &service
 }
 
 // CreateTestServiceVersion creates a test service version in the database
-func (h *TestHelpers) CreateTestServiceVersion(serviceID, version, description string) *models.ServiceVersion {
+func (h *TestHelpers) CreateTestServiceVersion(token, orgID, serviceID, version, description string) *models.ServiceVersion {
 	h.ensureTestEnvironment()
-	serviceVersion := &models.ServiceVersion{
-		ServiceID:   serviceID,
-		Version:     version,
-		Description: description,
+
+	payload := map[string]interface{}{
+		"version":          version,
+		"description":      description,
+		"releaseTimestamp": time.Now(),
 	}
 
-	testDB := GetTestDB()
-	if err := testDB.Create(serviceVersion).Error; err != nil {
+	resp, err := h.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", orgID, serviceID), payload, token)
+	if err != nil {
 		h.t.Fatalf("Failed to create test service version: %v", err)
 	}
 
-	return serviceVersion
+	if resp.Code != http.StatusOK {
+		h.t.Fatalf("Failed to create test service version, status: %d, body: %s", resp.Code, resp.Body.String())
+	}
+
+	var serviceVersion models.ServiceVersion
+	h.AssertJSONResponse(resp, &serviceVersion)
+
+	return &serviceVersion
 }
 
 // GetTestServerURL returns the test server URL

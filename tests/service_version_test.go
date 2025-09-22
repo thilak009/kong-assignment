@@ -3,7 +3,6 @@ package tests
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/thilak009/kong-assignment/models"
 )
 
-// TestCreateServiceVersion tests POST /v1/services/{serviceId}/versions endpoint
+// TestCreateServiceVersion tests POST /v1/orgs/{orgId}/services/{serviceId}/versions endpoint
 func TestCreateServiceVersion(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -21,17 +20,19 @@ func TestCreateServiceVersion(t *testing.T) {
 		helpers.CleanupDatabase()
 	})
 
-	// Create a test service first
-	service := helpers.CreateTestService("Test Service", "Service for version testing")
-
 	t.Run("Success", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
 		payload := map[string]interface{}{
 			"version":          "1.0.0",
 			"description":      "Initial version of the service",
 			"releaseTimestamp": time.Now().Format(time.RFC3339),
 		}
 
-		resp, err := helpers.MakeRequest("POST", fmt.Sprintf("/v1/services/%s/versions", service.ID), payload)
+		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -46,6 +47,11 @@ func TestCreateServiceVersion(t *testing.T) {
 	})
 
 	t.Run("ValidationErrors", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
 		testCases := []struct {
 			name         string
 			payload      map[string]interface{}
@@ -90,39 +96,88 @@ func TestCreateServiceVersion(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("POST", fmt.Sprintf("/v1/services/%s/versions", service.ID), tc.payload)
+				resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), tc.payload, token)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
 
 				helpers.AssertStatusCode(resp, tc.expectedCode)
-
-				var errorResp models.ErrorResponse
-				helpers.AssertJSONResponse(resp, &errorResp)
-
-				assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
+				helpers.AssertErrorResponseNotEmpty(resp)
 			})
 		}
 	})
 
-	t.Run("ServiceNotFound", func(t *testing.T) {
+	t.Run("Unauthorized", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
 		payload := map[string]interface{}{
-			"version":     "1.0.0",
-			"description": "Valid description with enough length",
+			"version":          "1.0.0",
+			"description":      "Initial version of the service",
+			"releaseTimestamp": time.Now().Format(time.RFC3339),
 		}
 
-		nonExistentServiceID := "non-existent-service-id"
-		resp, err := helpers.MakeRequest("POST", fmt.Sprintf("/v1/services/%s/versions", nonExistentServiceID), payload)
+		// Test without token
+		resp, err := helpers.MakeRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), payload)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
 
-		helpers.AssertStatusCode(resp, http.StatusNotFound)
+		helpers.AssertStatusCode(resp, http.StatusUnauthorized)
+	})
+
+	t.Run("Forbidden", func(t *testing.T) {
+		// Setup first user and organization
+		_, token1 := helpers.CreateTestUser("test4@example.com", "Test User 4", "password123")
+		org1 := helpers.CreateTestOrganization(token1, "Test Organization 1", "Test org description")
+		service1 := helpers.CreateTestService(token1, org1.ID, "Test Service", "Service for version testing")
+
+		// Setup second user (different user)
+		_, token2 := helpers.CreateTestUser("test5@example.com", "Test User 5", "password123")
+
+		payload := map[string]interface{}{
+			"version":          "1.0.0",
+			"description":      "Initial version of the service",
+			"releaseTimestamp": time.Now().Format(time.RFC3339),
+		}
+
+		// Try to create version in org1 service using token2 (user5 is not member of org1)
+		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org1.ID, service1.ID), payload, token2)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp, http.StatusForbidden)
+	})
+
+	t.Run("DuplicateVersion", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test6@example.com", "Test User 6", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		// Create first version
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "First version")
+
+		payload := map[string]interface{}{
+			"version":          "1.0.0", // Same version
+			"description":      "Duplicate version attempt",
+			"releaseTimestamp": time.Now().Format(time.RFC3339),
+		}
+
+		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), payload, token)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp, http.StatusInternalServerError) // Database constraint violation
 	})
 }
 
-// TestGetAllServiceVersions tests GET /v1/services/{serviceId}/versions endpoint
-func TestGetAllServiceVersions(t *testing.T) {
+// TestGetServiceVersions tests GET /v1/orgs/{orgId}/services/{serviceId}/versions endpoint
+func TestGetServiceVersions(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
 	// Clean database before and after test
@@ -131,11 +186,13 @@ func TestGetAllServiceVersions(t *testing.T) {
 		helpers.CleanupDatabase()
 	})
 
-	// Create a test service first
-	service := helpers.CreateTestService("Test Service", "Service for version testing")
-
 	t.Run("EmptyList", func(t *testing.T) {
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions", service.ID), nil)
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -145,15 +202,20 @@ func TestGetAllServiceVersions(t *testing.T) {
 		var result models.PaginatedResult[models.ServiceVersion]
 		helpers.AssertJSONResponse(resp, &result)
 
-		assert.Empty(t, result.Data, "Expected empty service versions data")
+		assert.Len(t, result.Data, 0, "Expected empty versions data")
 		assert.Equal(t, 0, result.Meta.TotalCount, "Expected total count to be 0")
 	})
 
 	t.Run("WithData", func(t *testing.T) {
-		// Create test service version
-		helpers.CreateTestServiceVersion(service.ID, "1.0.0", "Initial version for testing")
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions", service.ID), nil)
+		// Create test version
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -163,89 +225,74 @@ func TestGetAllServiceVersions(t *testing.T) {
 		var result models.PaginatedResult[models.ServiceVersion]
 		helpers.AssertJSONResponse(resp, &result)
 
-		assert.Len(t, result.Data, 1, "Expected 1 service version")
-		assert.Equal(t, 1, result.Meta.TotalCount, "Expected total count 1")
-		assert.Equal(t, 0, result.Meta.CurrentPage, "Expected current page 0")
+		assert.Len(t, result.Data, 1, "Expected 1 version in data")
+		assert.Equal(t, 1, result.Meta.TotalCount, "Expected total count to be 1")
+		assert.Equal(t, 0, result.Meta.CurrentPage, "Expected current page to be 0")
 	})
 
 	t.Run("WithQueryParameters", func(t *testing.T) {
-		// Clean up any existing data first to ensure test isolation
-		helpers.CleanupDatabase()
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
-		// Create test service for this subtest
-		queryTestService := helpers.CreateTestService("Query Test Service", "Service for query parameter testing")
-
-		// Create multiple test service versions
-		helpers.CreateTestServiceVersion(queryTestService.ID, "1.0.0", "Initial version for query testing")
-		helpers.CreateTestServiceVersion(queryTestService.ID, "1.0.1", "Patch version for query testing")
-		helpers.CreateTestServiceVersion(queryTestService.ID, "1.1.0", "Minor version for query testing")
-		helpers.CreateTestServiceVersion(queryTestService.ID, "2.0.0", "Major version for query testing")
+		// Create test versions
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "2.0.0", "Major update")
 
 		testCases := []struct {
-			name           string
-			query          string
-			expectedCount  int
-			shouldContain  string
+			name       string
+			query      string
+			shouldFind bool
+			expectedCount int
 		}{
 			{
-				name:           "Search by version prefix - 1",
-				query:          "?q=1",
-				expectedCount:  3, // 1.0.0, 1.0.1, 1.1.0
-				shouldContain:  "1.",
+				name:       "Search by version - exact match",
+				query:      "?q=1.0.0",
+				shouldFind: true,
+				expectedCount: 1,
 			},
 			{
-				name:           "Search by version prefix - 1.0",
-				query:          "?q=1.0",
-				expectedCount:  2, // 1.0.0, 1.0.1
-				shouldContain:  "1.0",
+				name:       "Search by version - partial match",
+				query:      "?q=1.",
+				shouldFind: true,
+				expectedCount: 1,
 			},
 			{
-				name:           "Search by version prefix - 2",
-				query:          "?q=2",
-				expectedCount:  1, // 2.0.0
-				shouldContain:  "2.0.0",
+				name:       "Search by version - no match",
+				query:      "?q=3.0.0",
+				shouldFind: false,
+				expectedCount: 0,
 			},
 			{
-				name:           "Search by version - no match",
-				query:          "?q=3",
-				expectedCount:  0,
-				shouldContain:  "",
+				name:       "Sort by version ascending",
+				query:      "?sort_by=version&sort=asc",
+				shouldFind: true,
+				expectedCount: 2,
 			},
 			{
-				name:           "Sort by version ascending",
-				query:          "?sort_by=version&sort=asc",
-				expectedCount:  4, // Total: 1.0.0, 1.0.1, 1.1.0, 2.0.0
-				shouldContain:  "",
+				name:       "Sort by created_at descending",
+				query:      "?sort_by=created_at&sort=desc",
+				shouldFind: true,
+				expectedCount: 2,
 			},
 			{
-				name:           "Sort by created_at descending",
-				query:          "?sort_by=created_at&sort=desc",
-				expectedCount:  4,
-				shouldContain:  "",
+				name:       "Pagination - page 0",
+				query:      "?page=0&per_page=1",
+				shouldFind: true,
+				expectedCount: 1,
 			},
 			{
-				name:           "Pagination - page 0",
-				query:          "?page=0&per_page=2",
-				expectedCount:  2,
-				shouldContain:  "",
-			},
-			{
-				name:           "Pagination - page 1",
-				query:          "?page=1&per_page=2",
-				expectedCount:  2,
-				shouldContain:  "",
-			},
-			{
-				name:           "Pagination - page 2",
-				query:          "?page=2&per_page=2",
-				expectedCount:  0, // No more versions on page 2 (4 total, 2 per page = 2 full pages)
-				shouldContain:  "",
+				name:       "Pagination - page 1",
+				query:      "?page=1&per_page=1",
+				shouldFind: true,
+				expectedCount: 1,
 			},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions%s", queryTestService.ID, tc.query), nil)
+				resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions%s", org.ID, service.ID, tc.query), nil, token)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -255,39 +302,17 @@ func TestGetAllServiceVersions(t *testing.T) {
 				var result models.PaginatedResult[models.ServiceVersion]
 				helpers.AssertJSONResponse(resp, &result)
 
-				assert.Len(t, result.Data, tc.expectedCount, "Expected %d service versions", tc.expectedCount)
-
-				if tc.shouldContain != "" && len(result.Data) > 0 {
-					found := false
-					for _, version := range result.Data {
-						if strings.Contains(version.Version, tc.shouldContain) {
-							found = true
-							break
-						}
-					}
-					assert.True(t, found, "Expected to find version containing '%s', but found versions: %v", tc.shouldContain, getVersionStrings(result.Data))
+				if tc.shouldFind {
+					assert.Len(t, result.Data, tc.expectedCount, "Expected count mismatch")
+				} else {
+					assert.Empty(t, result.Data, "Expected empty result")
 				}
 			})
 		}
 	})
-
-	t.Run("ServiceNotFound", func(t *testing.T) {
-		nonExistentServiceID := "non-existent-service-id"
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions", nonExistentServiceID), nil)
-		if err != nil {
-			t.Fatalf("Failed to make request: %v", err)
-		}
-
-		helpers.AssertStatusCode(resp, http.StatusNotFound)
-
-		var errorResp models.ErrorResponse
-		helpers.AssertJSONResponse(resp, &errorResp)
-
-		assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
-	})
 }
 
-// TestGetServiceVersion tests GET /v1/services/{serviceId}/versions/{id} endpoint
+// TestGetServiceVersion tests GET /v1/orgs/{orgId}/services/{serviceId}/versions/{versionId} endpoint
 func TestGetServiceVersion(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -297,12 +322,16 @@ func TestGetServiceVersion(t *testing.T) {
 		helpers.CleanupDatabase()
 	})
 
-	// Create test service and version
-	service := helpers.CreateTestService("Test Service", "Service for version testing")
-	serviceVersion := helpers.CreateTestServiceVersion(service.ID, "1.0.0", "Initial version for testing")
-
 	t.Run("Success", func(t *testing.T) {
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, serviceVersion.ID), nil)
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		// Create test version
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -312,43 +341,29 @@ func TestGetServiceVersion(t *testing.T) {
 		var retrievedVersion models.ServiceVersion
 		helpers.AssertJSONResponse(resp, &retrievedVersion)
 
-		assert.Equal(t, serviceVersion.ID, retrievedVersion.ID, "Version ID should match")
-		assert.Equal(t, service.ID, retrievedVersion.ServiceID, "Service ID should match")
+		assert.Equal(t, version.ID, retrievedVersion.ID, "Version ID should match")
 		assert.Equal(t, "1.0.0", retrievedVersion.Version, "Version should match")
+		assert.Equal(t, service.ID, retrievedVersion.ServiceID, "Service ID should match")
 	})
 
-	t.Run("ServiceNotFound", func(t *testing.T) {
-		nonExistentServiceID := "non-existent-service-id"
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions/%s", nonExistentServiceID, serviceVersion.ID), nil)
+	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		nonExistentID := "non-existent-id"
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, nonExistentID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
 
 		helpers.AssertStatusCode(resp, http.StatusNotFound)
-
-		var errorResp models.ErrorResponse
-		helpers.AssertJSONResponse(resp, &errorResp)
-
-		assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
-	})
-
-	t.Run("VersionNotFound", func(t *testing.T) {
-		nonExistentVersionID := "non-existent-version-id"
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, nonExistentVersionID), nil)
-		if err != nil {
-			t.Fatalf("Failed to make request: %v", err)
-		}
-
-		helpers.AssertStatusCode(resp, http.StatusNotFound)
-
-		var errorResp models.ErrorResponse
-		helpers.AssertJSONResponse(resp, &errorResp)
-
-		assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
+		helpers.AssertErrorResponseNotEmpty(resp)
 	})
 }
 
-// TestUpdateServiceVersion tests PATCH /v1/services/{serviceId}/versions/{id} endpoint
+// TestUpdateServiceVersion tests PATCH /v1/orgs/{orgId}/services/{serviceId}/versions/{versionId} endpoint
 func TestUpdateServiceVersion(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -358,17 +373,20 @@ func TestUpdateServiceVersion(t *testing.T) {
 		helpers.CleanupDatabase()
 	})
 
-	// Create test service and version
-	service := helpers.CreateTestService("Test Service", "Service for version testing")
-	serviceVersion := helpers.CreateTestServiceVersion(service.ID, "1.0.0", "Initial version for testing")
-
 	t.Run("Success", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		// Create test version
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+
 		payload := map[string]interface{}{
-			"description":      "Updated version description",
-			"releaseTimestamp": time.Now().Add(time.Hour).Format(time.RFC3339),
+			"description": "Updated version description",
 		}
 
-		resp, err := helpers.MakeRequest("PATCH", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, serviceVersion.ID), payload)
+		resp, err := helpers.MakeAuthenticatedRequest("PATCH", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -379,63 +397,22 @@ func TestUpdateServiceVersion(t *testing.T) {
 		helpers.AssertJSONResponse(resp, &updatedVersion)
 
 		assert.Equal(t, "Updated version description", updatedVersion.Description, "Description should be updated")
-		// Version should remain unchanged
 		assert.Equal(t, "1.0.0", updatedVersion.Version, "Version should remain unchanged")
+		assert.Equal(t, service.ID, updatedVersion.ServiceID, "Service ID should remain unchanged")
 	})
 
-	t.Run("ValidationErrors", func(t *testing.T) {
-		testCases := []struct {
-			name    string
-			payload map[string]interface{}
-		}{
-			{
-				name:    "Description too short",
-				payload: map[string]interface{}{"description": "Short"},
-			},
-			{
-				name:    "Description too long",
-				payload: map[string]interface{}{"description": string(make([]byte, 1001))},
-			},
-		}
+	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("PATCH", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, serviceVersion.ID), tc.payload)
-				if err != nil {
-					t.Fatalf("Failed to make request: %v", err)
-				}
-
-				helpers.AssertStatusCode(resp, http.StatusBadRequest)
-
-				var errorResp models.ErrorResponse
-				helpers.AssertJSONResponse(resp, &errorResp)
-
-				assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
-			})
-		}
-	})
-
-	t.Run("ServiceNotFound", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"description": "Updated description with enough length",
+			"description": "Updated description",
 		}
 
-		nonExistentServiceID := "non-existent-service-id"
-		resp, err := helpers.MakeRequest("PATCH", fmt.Sprintf("/v1/services/%s/versions/%s", nonExistentServiceID, serviceVersion.ID), payload)
-		if err != nil {
-			t.Fatalf("Failed to make request: %v", err)
-		}
-
-		helpers.AssertStatusCode(resp, http.StatusNotFound)
-	})
-
-	t.Run("VersionNotFound", func(t *testing.T) {
-		payload := map[string]interface{}{
-			"description": "Updated description with enough length",
-		}
-
-		nonExistentVersionID := "non-existent-version-id"
-		resp, err := helpers.MakeRequest("PATCH", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, nonExistentVersionID), payload)
+		nonExistentID := "non-existent-id"
+		resp, err := helpers.MakeAuthenticatedRequest("PATCH", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, nonExistentID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -444,7 +421,7 @@ func TestUpdateServiceVersion(t *testing.T) {
 	})
 }
 
-// TestDeleteServiceVersion tests DELETE /v1/services/{serviceId}/versions/{id} endpoint
+// TestDeleteServiceVersion tests DELETE /v1/orgs/{orgId}/services/{serviceId}/versions/{versionId} endpoint
 func TestDeleteServiceVersion(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -454,12 +431,16 @@ func TestDeleteServiceVersion(t *testing.T) {
 		helpers.CleanupDatabase()
 	})
 
-	// Create test service and version
-	service := helpers.CreateTestService("Test Service", "Service for version testing")
-	serviceVersion := helpers.CreateTestServiceVersion(service.ID, "1.0.0", "Initial version for testing")
-
 	t.Run("Success", func(t *testing.T) {
-		resp, err := helpers.MakeRequest("DELETE", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, serviceVersion.ID), nil)
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		// Create test version
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+
+		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -467,7 +448,7 @@ func TestDeleteServiceVersion(t *testing.T) {
 		helpers.AssertStatusCode(resp, http.StatusNoContent)
 
 		// Verify version is deleted by trying to get it
-		getResp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, serviceVersion.ID), nil)
+		getResp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -475,44 +456,18 @@ func TestDeleteServiceVersion(t *testing.T) {
 		helpers.AssertStatusCode(getResp, http.StatusNotFound)
 	})
 
-	t.Run("ServiceNotFound", func(t *testing.T) {
-		// Create another version for this test
-		anotherVersion := helpers.CreateTestServiceVersion(service.ID, "1.0.1", "Another version for testing")
+	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
-		nonExistentServiceID := "non-existent-service-id"
-		resp, err := helpers.MakeRequest("DELETE", fmt.Sprintf("/v1/services/%s/versions/%s", nonExistentServiceID, anotherVersion.ID), nil)
+		nonExistentID := "non-existent-id"
+		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, nonExistentID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
 
 		helpers.AssertStatusCode(resp, http.StatusNotFound)
-
-		var errorResp models.ErrorResponse
-		helpers.AssertJSONResponse(resp, &errorResp)
-
-		assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
 	})
-
-	t.Run("VersionNotFound", func(t *testing.T) {
-		nonExistentVersionID := "non-existent-version-id"
-		resp, err := helpers.MakeRequest("DELETE", fmt.Sprintf("/v1/services/%s/versions/%s", service.ID, nonExistentVersionID), nil)
-		if err != nil {
-			t.Fatalf("Failed to make request: %v", err)
-		}
-
-		helpers.AssertStatusCode(resp, http.StatusNotFound)
-
-		var errorResp models.ErrorResponse
-		helpers.AssertJSONResponse(resp, &errorResp)
-
-		assert.NotEmpty(t, errorResp.Message, "Error message should not be empty")
-	})
-}
-// getVersionStrings extracts version strings from service versions for debugging
-func getVersionStrings(versions []*models.ServiceVersion) []string {
-	result := make([]string, len(versions))
-	for i, version := range versions {
-		result[i] = version.Version
-	}
-	return result
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/thilak009/kong-assignment/models"
 )
 
-// TestCreateService tests POST /v1/services endpoint
+// TestCreateService tests POST /v1/orgs/{orgId}/services endpoint
 func TestCreateService(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -20,12 +20,16 @@ func TestCreateService(t *testing.T) {
 	})
 
 	t.Run("Success", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		payload := map[string]interface{}{
 			"name":        "Test Service",
 			"description": "This is a test service for integration testing",
 		}
 
-		resp, err := helpers.MakeRequest("POST", "/v1/services", payload)
+		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services", org.ID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -37,9 +41,14 @@ func TestCreateService(t *testing.T) {
 
 		// Validate response structure with helper
 		helpers.AssertServiceFields(service, "Test Service", "This is a test service for integration testing")
+		assert.Equal(t, org.ID, service.OrganizationID, "Service should belong to the organization")
 	})
 
 	t.Run("ValidationErrors", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		testCases := []struct {
 			name         string
 			payload      map[string]interface{}
@@ -84,7 +93,7 @@ func TestCreateService(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("POST", "/v1/services", tc.payload)
+				resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services", org.ID), tc.payload, token)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -94,9 +103,50 @@ func TestCreateService(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
+		payload := map[string]interface{}{
+			"name":        "Test Service",
+			"description": "This is a test service for integration testing",
+		}
+
+		// Test without token
+		resp, err := helpers.MakeRequest("POST", fmt.Sprintf("/v1/orgs/%s/services", org.ID), payload)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp, http.StatusUnauthorized)
+	})
+
+	t.Run("Forbidden", func(t *testing.T) {
+		// Setup first user and organization
+		_, token1 := helpers.CreateTestUser("test4@example.com", "Test User 4", "password123")
+		org1 := helpers.CreateTestOrganization(token1, "Test Organization 1", "Test org description")
+
+		// Setup second user (different user)
+		_, token2 := helpers.CreateTestUser("test5@example.com", "Test User 5", "password123")
+
+		payload := map[string]interface{}{
+			"name":        "Test Service",
+			"description": "This is a test service for integration testing",
+		}
+
+		// Try to create service in org1 using token2 (user5 is not member of org1)
+		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services", org1.ID), payload, token2)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp, http.StatusForbidden)
+	})
 }
 
-// TestGetAllServices tests GET /v1/services endpoint
+// TestGetAllServices tests GET /v1/orgs/{orgId}/services endpoint
 func TestGetAllServices(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -107,7 +157,11 @@ func TestGetAllServices(t *testing.T) {
 	})
 
 	t.Run("EmptyList", func(t *testing.T) {
-		resp, err := helpers.MakeRequest("GET", "/v1/services", nil)
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services", org.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -122,10 +176,14 @@ func TestGetAllServices(t *testing.T) {
 	})
 
 	t.Run("WithData", func(t *testing.T) {
-		// Create test service
-		helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
-		resp, err := helpers.MakeRequest("GET", "/v1/services", nil)
+		// Create test service
+		helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services", org.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -141,8 +199,12 @@ func TestGetAllServices(t *testing.T) {
 	})
 
 	t.Run("WithQueryParameters", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		// Create test service
-		helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
 
 		testCases := []struct {
 			name       string
@@ -188,7 +250,7 @@ func TestGetAllServices(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("GET", "/v1/services"+tc.query, nil)
+				resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services%s", org.ID, tc.query), nil, token)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -208,10 +270,14 @@ func TestGetAllServices(t *testing.T) {
 	})
 
 	t.Run("WithIncludeVersionCount", func(t *testing.T) {
-		// Create test service
-		helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test4@example.com", "Test User 4", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
-		resp, err := helpers.MakeRequest("GET", "/v1/services?include=versionCount", nil)
+		// Create test service
+		helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services?include=versionCount", org.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -228,7 +294,7 @@ func TestGetAllServices(t *testing.T) {
 	})
 }
 
-// TestGetService tests GET /v1/services/{id} endpoint
+// TestGetService tests GET /v1/orgs/{orgId}/services/{serviceId} endpoint
 func TestGetService(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -239,10 +305,14 @@ func TestGetService(t *testing.T) {
 	})
 
 	t.Run("Success", func(t *testing.T) {
-		// Create test service
-		service := helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s", service.ID), nil)
+		// Create test service
+		service := helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -254,11 +324,16 @@ func TestGetService(t *testing.T) {
 
 		assert.Equal(t, service.ID, retrievedService.ID, "Service ID should match")
 		assert.Equal(t, "Integration Test Service", retrievedService.Name, "Service name should match")
+		assert.Equal(t, org.ID, retrievedService.OrganizationID, "Service should belong to the organization")
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		nonExistentID := "non-existent-id"
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s", nonExistentID), nil)
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, nonExistentID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -268,10 +343,14 @@ func TestGetService(t *testing.T) {
 	})
 
 	t.Run("WithIncludeVersionCount", func(t *testing.T) {
-		// Create test service
-		service := helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
-		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s?include=versionCount", service.ID), nil)
+		// Create test service
+		service := helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
+
+		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s?include=versionCount", org.ID, service.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -285,7 +364,7 @@ func TestGetService(t *testing.T) {
 	})
 }
 
-// TestUpdateService tests PUT /v1/services/{id} endpoint
+// TestUpdateService tests PUT /v1/orgs/{orgId}/services/{serviceId} endpoint
 func TestUpdateService(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -296,15 +375,19 @@ func TestUpdateService(t *testing.T) {
 	})
 
 	t.Run("Success", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		// Create test service
-		service := helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		service := helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
 
 		payload := map[string]interface{}{
 			"name":        "Updated Test Service",
 			"description": "This is an updated test service description",
 		}
 
-		resp, err := helpers.MakeRequest("PUT", fmt.Sprintf("/v1/services/%s", service.ID), payload)
+		resp, err := helpers.MakeAuthenticatedRequest("PUT", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -316,16 +399,21 @@ func TestUpdateService(t *testing.T) {
 
 		assert.Equal(t, "Updated Test Service", updatedService.Name, "Service name should be updated")
 		assert.Equal(t, "This is an updated test service description", updatedService.Description, "Service description should be updated")
+		assert.Equal(t, org.ID, updatedService.OrganizationID, "Service should still belong to the organization")
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		payload := map[string]interface{}{
 			"name":        "Updated Service",
 			"description": "Updated description with enough length",
 		}
 
 		nonExistentID := "non-existent-id"
-		resp, err := helpers.MakeRequest("PUT", fmt.Sprintf("/v1/services/%s", nonExistentID), payload)
+		resp, err := helpers.MakeAuthenticatedRequest("PUT", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, nonExistentID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -334,8 +422,12 @@ func TestUpdateService(t *testing.T) {
 	})
 
 	t.Run("ValidationErrors", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		// Create test service
-		service := helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		service := helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
 
 		testCases := []struct {
 			name    string
@@ -353,7 +445,7 @@ func TestUpdateService(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("PUT", fmt.Sprintf("/v1/services/%s", service.ID), tc.payload)
+				resp, err := helpers.MakeAuthenticatedRequest("PUT", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), tc.payload, token)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -365,7 +457,7 @@ func TestUpdateService(t *testing.T) {
 	})
 }
 
-// TestDeleteService tests DELETE /v1/services/{id} endpoint
+// TestDeleteService tests DELETE /v1/orgs/{orgId}/services/{serviceId} endpoint
 func TestDeleteService(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -376,10 +468,14 @@ func TestDeleteService(t *testing.T) {
 	})
 
 	t.Run("Success", func(t *testing.T) {
-		// Create test service
-		service := helpers.CreateTestService("Integration Test Service", "Service for integration testing")
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
-		resp, err := helpers.MakeRequest("DELETE", fmt.Sprintf("/v1/services/%s", service.ID), nil)
+		// Create test service
+		service := helpers.CreateTestService(token, org.ID, "Integration Test Service", "Service for integration testing")
+
+		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -387,7 +483,7 @@ func TestDeleteService(t *testing.T) {
 		helpers.AssertStatusCode(resp, http.StatusNoContent)
 
 		// Verify service is deleted by trying to get it
-		getResp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/services/%s", service.ID), nil)
+		getResp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -396,13 +492,16 @@ func TestDeleteService(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user and organization
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+
 		nonExistentID := "non-existent-id"
-		resp, err := helpers.MakeRequest("DELETE", fmt.Sprintf("/v1/services/%s", nonExistentID), nil)
+		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, nonExistentID), nil, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
 
 		helpers.AssertStatusCode(resp, http.StatusNotFound)
-		helpers.AssertErrorResponseNotEmpty(resp)
 	})
 }

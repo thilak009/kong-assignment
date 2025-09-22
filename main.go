@@ -9,6 +9,7 @@ import (
 	db "github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/models"
 	"github.com/thilak009/kong-assignment/routes"
+	"github.com/thilak009/kong-assignment/utils"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -45,8 +46,8 @@ func CORSMiddleware() gin.HandlerFunc {
 // Generate a unique ID and attach it to each request for future reference or use
 func RequestIDMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		uuid := uuid.New()
-		c.Writer.Header().Set("X-Request-Id", uuid.String())
+		requestID := uuid.New().String()
+		c.Set(string(utils.RequestIDKey), requestID)
 		c.Next()
 	}
 }

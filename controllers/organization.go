@@ -7,6 +7,7 @@ import (
 	"github.com/thilak009/kong-assignment/forms"
 	"github.com/thilak009/kong-assignment/middleware"
 	"github.com/thilak009/kong-assignment/models"
+	"github.com/thilak009/kong-assignment/utils"
 )
 
 type OrganizationController struct{}
@@ -38,9 +39,7 @@ func (ctrl OrganizationController) GetOrganizations(c *gin.Context) {
 
 	result, err := organizationModel.GetUserOrganizations(userID, q, sortBy, sort, page, perPage)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to fetch organizations",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to fetch organizations")
 		return
 	}
 
@@ -65,17 +64,13 @@ func (ctrl OrganizationController) CreateOrganization(c *gin.Context) {
 	var form forms.CreateOrganizationForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Message: "Invalid request data",
-		})
+		utils.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
 		return
 	}
 
 	organization, err := organizationModel.Create(form, userID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to create organization",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to create organization")
 		return
 	}
 
@@ -103,31 +98,23 @@ func (ctrl OrganizationController) GetOrganization(c *gin.Context) {
 	// Check if user is member of organization
 	isMember, err := organizationModel.IsUserMember(orgID, userID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to check organization access",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return
 	}
 
 	if !isMember {
-		c.AbortWithStatusJSON(http.StatusForbidden, models.ErrorResponse{
-			Message: "You are not authorized to perform the request",
-		})
+		utils.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
 		return
 	}
 
 	organization, exists, err := organizationModel.One(orgID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to fetch organization",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to fetch organization")
 		return
 	}
 
 	if !exists {
-		c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-			Message: "Organization not found",
-		})
+		utils.AbortWithError(c, http.StatusNotFound, "Organization not found")
 		return
 	}
 
@@ -156,33 +143,25 @@ func (ctrl OrganizationController) UpdateOrganization(c *gin.Context) {
 	var form forms.CreateOrganizationForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Message: "Invalid request data",
-		})
+		utils.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
 		return
 	}
 
 	// Check if user is member of organization
 	isMember, err := organizationModel.IsUserMember(orgID, userID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to check organization access",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return
 	}
 
 	if !isMember {
-		c.AbortWithStatusJSON(http.StatusForbidden, models.ErrorResponse{
-			Message: "You are not authorized to perform the request",
-		})
+		utils.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
 		return
 	}
 
 	organization, err := organizationModel.Update(orgID, form)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to update organization",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to update organization")
 		return
 	}
 
@@ -210,24 +189,18 @@ func (ctrl OrganizationController) DeleteOrganization(c *gin.Context) {
 	// Check if user is member of organization
 	isMember, err := organizationModel.IsUserMember(orgID, userID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to check organization access",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return
 	}
 
 	if !isMember {
-		c.AbortWithStatusJSON(http.StatusForbidden, models.ErrorResponse{
-			Message: "You are not authorized to perform the request",
-		})
+		utils.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
 		return
 	}
 
 	err = organizationModel.Delete(orgID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to delete organization",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to delete organization")
 		return
 	}
 

@@ -73,7 +73,7 @@ func setupTestDatabase() {
 	testDB = db.GetDB()
 
 	// Run migrations using existing function
-	err := db.RunMigrations(&models.Service{}, &models.ServiceVersion{})
+	err := db.RunMigrations(&models.User{}, &models.Organization{}, &models.Service{}, &models.ServiceVersion{}, &models.UserOrganizationMap{})
 	if err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}

@@ -109,5 +109,5 @@ make generate_docs
     - hence authorization is very basic, the user who created the org can do all operations on the org  
 
 ## TODO
-1. Tests for remaining APIs
-2. Improve logging   
+1. Logout API - needs persisting the tokens
+2. Improve logging

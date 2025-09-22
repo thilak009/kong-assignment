@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/forms"
 	"github.com/thilak009/kong-assignment/models"
+	"github.com/thilak009/kong-assignment/utils"
 )
 
 type ServiceVersionController struct{}
@@ -39,9 +40,7 @@ func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
 	var form forms.CreateServiceVersionForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
 		message := serviceVersionForm.Create(validationErr)
-		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Message: message,
-		})
+		utils.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 
@@ -49,23 +48,17 @@ func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
 	_, isFound, err := serviceModel.One(serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
-			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-				Message: "Service not found",
-			})
+			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Could not get versions",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get versions")
 		return
 	}
 
 	// TODO: handle same version tag creation by returning a bad request maybe
 	version, err := serviceVersionModel.Create(serviceID, form)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Service version could not be created",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Service version could not be created")
 		return
 	}
 
@@ -103,14 +96,10 @@ func (ctrl ServiceVersionController) GetServiceVersions(c *gin.Context) {
 	_, isFound, err := serviceModel.One(serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
-			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-				Message: "Service not found",
-			})
+			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Could not get versions",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get versions")
 		return
 	}
 	q := c.Query("q")
@@ -119,9 +108,7 @@ func (ctrl ServiceVersionController) GetServiceVersions(c *gin.Context) {
 
 	versions, err := serviceVersionModel.All(serviceID, orgID, q, sortBy, sort, page, perPage)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Could not get service versions",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get service versions")
 		return
 	}
 
@@ -156,14 +143,10 @@ func (ctrl ServiceVersionController) GetServiceVersion(c *gin.Context) {
 	version, isFound, err := serviceVersionModel.One(serviceID, orgID, id)
 	if err != nil {
 		if !isFound {
-			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-				Message: "Service version not found",
-			})
+			utils.AbortWithError(c, http.StatusNotFound, "Service version not found")
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Could not get version",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get version")
 		return
 	}
 
@@ -197,9 +180,7 @@ func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
 	var form forms.UpdateServiceVersionForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
 		message := serviceVersionForm.Update(validationErr)
-		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Message: message,
-		})
+		utils.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 
@@ -209,22 +190,16 @@ func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
 	_, isFound, err := serviceVersionModel.One(serviceID, orgID, id)
 	if err != nil {
 		if !isFound {
-			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-				Message: "Service version not found",
-			})
+			utils.AbortWithError(c, http.StatusNotFound, "Service version not found")
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Could not get version",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get version")
 		return
 	}
 
 	version, err := serviceVersionModel.Update(serviceID, orgID, id, form)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Service version could not be updated",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Service version could not be updated")
 		return
 	}
 	c.JSON(http.StatusOK, version)
@@ -258,22 +233,16 @@ func (ctrl ServiceVersionController) DeleteServiceVersion(c *gin.Context) {
 	_, isFound, err := serviceVersionModel.One(serviceID, orgID, id)
 	if err != nil {
 		if !isFound {
-			c.AbortWithStatusJSON(http.StatusNotFound, models.ErrorResponse{
-				Message: "Service version not found",
-			})
+			utils.AbortWithError(c, http.StatusNotFound, "Service version not found")
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Could not get version",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get version")
 		return
 	}
 
 	err = serviceVersionModel.Delete(id)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Service version could not be deleted",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Service version could not be deleted")
 		return
 	}
 

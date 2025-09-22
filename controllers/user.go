@@ -29,34 +29,28 @@ func (ctrl UserController) Register(c *gin.Context) {
 	var form forms.CreateUserForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Message: "Invalid request data",
-		})
+		utils.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
 		return
 	}
 
 	// Check if user already exists
 	_, exists, err := userModel.FindByEmail(form.Email)
 	if err != nil {
-		if exists {
-			// TODO: avoid username enumeration
-			c.AbortWithStatusJSON(http.StatusConflict, models.ErrorResponse{
-				Message: "User with this email already exists",
-			})
-			return
-		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to check user existence",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check user existence")
+		return
+	}
+	if exists {
+		// TODO: avoid username enumeration
+		// ideally there should be a email verification flow so that all register calls
+		// return something like check your email for link kind of response
+		utils.AbortWithError(c, http.StatusConflict, "User with this email already exists")
 		return
 	}
 
 	// Create user
 	user, err := userModel.Create(form)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to create user",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
 
@@ -79,9 +73,7 @@ func (ctrl UserController) Login(c *gin.Context) {
 	var form forms.LoginForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, models.ErrorResponse{
-			Message: "Invalid request data",
-		})
+		utils.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
 		return
 	}
 
@@ -89,31 +81,23 @@ func (ctrl UserController) Login(c *gin.Context) {
 	user, exists, err := userModel.FindByEmail(form.Email)
 	if err != nil {
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
-				Message: "Invalid email/password",
-			})
+			utils.AbortWithError(c, http.StatusUnauthorized, "Invalid email/password")
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to find user",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to find user")
 		return
 	}
 
 	// Check password
 	if !user.CheckPassword(form.Password) {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
-			Message: "Invalid email/password",
-		})
+		utils.AbortWithError(c, http.StatusUnauthorized, "Invalid email/password")
 		return
 	}
 
 	// Generate JWT token
 	token, err := utils.GenerateToken(user.ID, user.Email)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to generate token",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
