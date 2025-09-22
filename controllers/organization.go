@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/forms"
-	"github.com/thilak009/kong-assignment/middleware"
 	"github.com/thilak009/kong-assignment/models"
 	"github.com/thilak009/kong-assignment/utils"
 )
@@ -31,7 +30,7 @@ var organizationModel = models.OrganizationModel{}
 // @Security BearerAuth
 // @Router /orgs [get]
 func (ctrl OrganizationController) GetOrganizations(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	userID := utils.GetUserID(c)
 
 	q := c.Query("q")
 	sortBy, sort := models.ParseSortParams(c, models.GetOrganizationValidSortFields(), "updated_at")
@@ -60,7 +59,7 @@ func (ctrl OrganizationController) GetOrganizations(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs [post]
 func (ctrl OrganizationController) CreateOrganization(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	userID := utils.GetUserID(c)
 	var form forms.CreateOrganizationForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
@@ -92,7 +91,7 @@ func (ctrl OrganizationController) CreateOrganization(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId} [get]
 func (ctrl OrganizationController) GetOrganization(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	userID := utils.GetUserID(c)
 	orgID := c.Param("orgId")
 
 	// Check if user is member of organization
@@ -138,7 +137,7 @@ func (ctrl OrganizationController) GetOrganization(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId} [put]
 func (ctrl OrganizationController) UpdateOrganization(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	userID := utils.GetUserID(c)
 	orgID := c.Param("orgId")
 	var form forms.CreateOrganizationForm
 
@@ -183,7 +182,7 @@ func (ctrl OrganizationController) UpdateOrganization(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId} [delete]
 func (ctrl OrganizationController) DeleteOrganization(c *gin.Context) {
-	userID := middleware.GetUserID(c)
+	userID := utils.GetUserID(c)
 	orgID := c.Param("orgId")
 
 	// Check if user is member of organization

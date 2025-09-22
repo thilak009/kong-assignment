@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/controllers"
-	"github.com/thilak009/kong-assignment/middleware"
+	"github.com/thilak009/kong-assignment/pkg/middleware"
 )
 
 // SetupRoutes configures all API routes for the given router

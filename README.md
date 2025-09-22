@@ -25,20 +25,34 @@ The server provides CRUD APIs for Konnect platform which contains services and v
 ```
 .
 ├── controllers/          # HTTP handlers
+│   ├── organization.go  # Organization endpoints
 │   ├── service.go       # Service endpoints
-│   └── service_version.go # Service version endpoints
-├── models/              # Database models
+│   ├── service_version.go # Service version endpoints
+│   └── user.go          # User authentication endpoints
+├── models/              # Database models and business logic
 │   ├── base.go         # Base model with common fields
+│   ├── organization.go # Organization model
 │   ├── service.go      # Service model
-│   └── service_version.go # ServiceVersion model
+│   ├── service_version.go # ServiceVersion model
+│   └── user.go         # User model
+├── pkg/                 # Reusable packages
+│   ├── log/            # Structured logging with context
+│   └── middleware/     # HTTP middlewares (auth, logging, CORS, etc.)
+├── utils/               # Utility functions
+│   ├── context.go      # Context helper functions
+│   ├── jwt.go          # JWT token utilities
+│   └── response.go     # HTTP response helpers
 ├── forms/               # Request validation structs
+│   ├── organization.go # Organization form validation
 │   ├── service.go      # Service form validation
-│   └── service_version.go # ServiceVersion form validation
-├── db/                  # Database configuration
+│   ├── service_version.go # ServiceVersion form validation
+│   └── user.go         # User form validation
+├── routes/              # Route definitions
+├── db/                  # Database configuration and migrations
 ├── docs/                # Generated Swagger documentation
 ├── docker-compose.yml   # Docker setup
 ├── Makefile            # Build and development commands
-└── main.go             # Application entry point```
+└── main.go             # Application entry point
 ```
 
 ## Getting Started
@@ -110,4 +124,3 @@ make generate_docs
 
 ## TODO
 1. Logout API - needs persisting the tokens
-2. Improve logging

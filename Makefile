@@ -1,7 +1,7 @@
 ## RUN APPLICATION
 run:
 	@echo -e "🚀 Running the application..."
-	@go run *.go
+	@go run main.go
 
 ## TEST COMMANDS
 test:

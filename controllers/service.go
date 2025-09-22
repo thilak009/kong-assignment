@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/forms"
-	"github.com/thilak009/kong-assignment/middleware"
 	"github.com/thilak009/kong-assignment/models"
 	"github.com/thilak009/kong-assignment/utils"
 )
@@ -34,7 +33,7 @@ func parseIncludeParams(include string) (includeVersionCount bool) {
 
 // checkOrganizationAccess checks if user has access to the organization
 func checkOrganizationAccess(c *gin.Context) (userID, orgID string, hasAccess bool) {
-	userID = middleware.GetUserID(c)
+	userID = utils.GetUserID(c)
 	orgID = c.Param("orgId")
 
 	if userID == "" || orgID == "" {
@@ -43,16 +42,12 @@ func checkOrganizationAccess(c *gin.Context) (userID, orgID string, hasAccess bo
 
 	isMember, err := orgModel.IsUserMember(orgID, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Message: "Failed to check organization access",
-		})
+		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return userID, orgID, false
 	}
 
 	if !isMember {
-		c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Message: "You are not authorized to perform the request",
-		})
+		utils.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
 		return userID, orgID, false
 	}
 

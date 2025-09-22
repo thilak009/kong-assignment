@@ -1,20 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	stdlog "log"
 	"net/http"
 	"os"
 
 	db "github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/models"
+	"github.com/thilak009/kong-assignment/pkg/middleware"
+	"github.com/thilak009/kong-assignment/pkg/log"
 	"github.com/thilak009/kong-assignment/routes"
-	"github.com/thilak009/kong-assignment/utils"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -22,35 +21,6 @@ import (
 	"github.com/thilak009/kong-assignment/forms"
 )
 
-// CORSMiddleware ...
-// CORS (Cross-Origin Resource Sharing)
-func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "X-Requested-With, Content-Type, Origin, Authorization, Accept, Client-Security-Token, Accept-Encoding, x-access-token")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if c.Request.Method == "OPTIONS" {
-			fmt.Println("OPTIONS")
-			c.AbortWithStatus(200)
-		} else {
-			c.Next()
-		}
-	}
-}
-
-// RequestIDMiddleware ...
-// Generate a unique ID and attach it to each request for future reference or use
-func RequestIDMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		requestID := uuid.New().String()
-		c.Set(string(utils.RequestIDKey), requestID)
-		c.Next()
-	}
-}
 
 // @title           Konnect
 // @version         1.0
@@ -74,21 +44,25 @@ func main() {
 	//Load the .env file
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatal("error: failed to load the env file")
+		stdlog.Fatal("error: failed to load the env file")
 	}
 
 	if os.Getenv("ENV") == "PRODUCTION" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	//Start the default gin server
-	r := gin.Default()
+	//Start the gin server without default middleware
+	r := gin.New()
+
+	// Add only the recovery middleware (panics), skip default logger
+	r.Use(gin.Recovery())
 
 	//Custom form validator
 	binding.Validator = new(forms.DefaultValidator)
 
-	r.Use(CORSMiddleware())
-	r.Use(RequestIDMiddleware())
+	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.RequestIDMiddleware())
+	r.Use(middleware.LoggingMiddleware())
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
 	//Start PostgreSQL database
@@ -120,7 +94,9 @@ func main() {
 
 	port := os.Getenv("PORT")
 
-	log.Printf("\n\n PORT: %s \n ENV: %s \n Version: %s \n\n", port, os.Getenv("ENV"), os.Getenv("API_VERSION"))
+	// Log server startup info using our logger
+	logger := log.GetLogger()
+	logger.Infof("Starting server on port %s (ENV: %s, Version: %s)", port, os.Getenv("ENV"), os.Getenv("API_VERSION"))
 
 	r.Run(":" + port)
 }
