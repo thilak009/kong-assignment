@@ -7,8 +7,8 @@ import (
 
 	db "github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/models"
-	"github.com/thilak009/kong-assignment/pkg/middleware"
 	"github.com/thilak009/kong-assignment/pkg/log"
+	"github.com/thilak009/kong-assignment/pkg/middleware"
 	"github.com/thilak009/kong-assignment/routes"
 
 	"github.com/gin-contrib/gzip"
@@ -20,7 +20,6 @@ import (
 	_ "github.com/thilak009/kong-assignment/docs"
 	"github.com/thilak009/kong-assignment/forms"
 )
-
 
 // @title           Konnect
 // @version         1.0
@@ -78,6 +77,7 @@ func main() {
 		&models.Service{},
 		&models.ServiceVersion{},
 		&models.UserOrganizationMap{},
+		&models.BlacklistedToken{},
 	)
 
 	// Setup API routes
@@ -91,6 +91,9 @@ func main() {
 			"status": "UP",
 		})
 	})
+
+	// Start periodic cleanup of expired blacklisted tokens
+	go models.StartTokenCleanup()
 
 	port := os.Getenv("PORT")
 

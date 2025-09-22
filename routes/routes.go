@@ -13,14 +13,16 @@ func SetupRoutes(r *gin.Engine) {
 		/*** User Authentication - No auth required ***/
 		userController := new(controllers.UserController)
 
-		v1.POST("/user/register", userController.Register)
-		v1.POST("/user/login", userController.Login)
-		// v1.POST("/user/logout", userController.Logout)
+		v1.POST("/users/register", userController.Register)
+		v1.POST("/users/login", userController.Login)
 
 		/*** Protected routes - require authentication ***/
 		protected := v1.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
+			/*** User Authentication - Auth required ***/
+			protected.POST("/users/logout", userController.Logout)
+
 			/*** Organizations ***/
 			orgController := new(controllers.OrganizationController)
 

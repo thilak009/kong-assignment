@@ -42,12 +42,12 @@ func checkOrganizationAccess(c *gin.Context) (userID, orgID string, hasAccess bo
 
 	isMember, err := orgModel.IsUserMember(c.Request.Context(), orgID, userID)
 	if err != nil {
-		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
+		models.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return userID, orgID, false
 	}
 
 	if !isMember {
-		utils.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
+		models.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
 		return userID, orgID, false
 	}
 
@@ -78,13 +78,13 @@ func (ctrl ServiceController) CreateService(c *gin.Context) {
 	var form forms.CreateServiceForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
 		message := serviceForm.Create(validationErr)
-		utils.AbortWithError(c, http.StatusBadRequest, message)
+		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 
 	service, err := serviceModel.Create(c.Request.Context(), form, orgID)
 	if err != nil {
-		utils.AbortWithError(c, http.StatusInternalServerError, "Service could not be created")
+		models.AbortWithError(c, http.StatusInternalServerError, "Service could not be created")
 		return
 	}
 
@@ -126,7 +126,7 @@ func (ctrl ServiceController) GetServices(c *gin.Context) {
 
 	results, err := serviceModel.All(c.Request.Context(), orgID, q, sortBy, sort, page, perPage, includeVersionCount)
 	if err != nil {
-		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get services")
+		models.AbortWithError(c, http.StatusInternalServerError, "Could not get services")
 		return
 	}
 
@@ -162,10 +162,10 @@ func (ctrl ServiceController) GetService(c *gin.Context) {
 	service, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, includeVersionCount)
 	if err != nil {
 		if !isFound {
-			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
+			models.AbortWithError(c, http.StatusNotFound, "Service not found")
 			return
 		}
-		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get service")
+		models.AbortWithError(c, http.StatusInternalServerError, "Could not get service")
 		return
 	}
 
@@ -198,7 +198,7 @@ func (ctrl ServiceController) UpdateService(c *gin.Context) {
 	var form forms.CreateServiceForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
 		message := serviceForm.Create(validationErr)
-		utils.AbortWithError(c, http.StatusBadRequest, message)
+		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 
@@ -206,16 +206,16 @@ func (ctrl ServiceController) UpdateService(c *gin.Context) {
 	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
-			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
+			models.AbortWithError(c, http.StatusNotFound, "Service not found")
 			return
 		}
-		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get service")
+		models.AbortWithError(c, http.StatusInternalServerError, "Could not get service")
 		return
 	}
 
 	service, err := serviceModel.Update(c.Request.Context(), serviceID, orgID, form)
 	if err != nil {
-		utils.AbortWithError(c, http.StatusInternalServerError, "Service could not be updated")
+		models.AbortWithError(c, http.StatusInternalServerError, "Service could not be updated")
 		return
 	}
 	c.JSON(http.StatusOK, service)
@@ -246,16 +246,16 @@ func (ctrl ServiceController) DeleteService(c *gin.Context) {
 	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
-			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
+			models.AbortWithError(c, http.StatusNotFound, "Service not found")
 			return
 		}
-		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get service")
+		models.AbortWithError(c, http.StatusInternalServerError, "Could not get service")
 		return
 	}
 
 	err = serviceModel.Delete(c.Request.Context(), serviceID, orgID)
 	if err != nil {
-		utils.AbortWithError(c, http.StatusInternalServerError, "Service could not be deleted")
+		models.AbortWithError(c, http.StatusInternalServerError, "Service could not be deleted")
 		return
 	}
 

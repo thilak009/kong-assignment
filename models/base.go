@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/thilak009/kong-assignment/pkg/log"
 	"gorm.io/gorm"
 )
 
@@ -94,4 +95,30 @@ func ParseSortParams(c *gin.Context, validSortFields map[string]bool, defaultSor
 	}
 
 	return sortBy, sort
+}
+
+// AbortWithError sends an error response with automatic trace ID population
+func AbortWithError(c *gin.Context, statusCode int, message string) {
+	c.AbortWithStatusJSON(statusCode, ErrorResponse{
+		Message: message,
+		TraceId: log.GetRequestID(c.Request.Context()),
+	})
+}
+
+// AbortWithErrorDetails sends an error response with details and automatic trace ID population
+func AbortWithErrorDetails(c *gin.Context, statusCode int, errorType, message string, details interface{}) {
+	c.AbortWithStatusJSON(statusCode, ErrorResponse{
+		Type:    errorType,
+		Message: message,
+		TraceId: log.GetRequestID(c.Request.Context()),
+		Details: details,
+	})
+}
+
+// SendError sends an error response without aborting (for non-abort scenarios)
+func SendError(c *gin.Context, statusCode int, message string) {
+	c.JSON(statusCode, ErrorResponse{
+		Message: message,
+		TraceId: log.GetRequestID(c.Request.Context()),
+	})
 }

@@ -1090,7 +1090,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/login": {
+        "/users/login": {
             "post": {
                 "description": "Authenticate user and return JWT token",
                 "consumes": [
@@ -1143,7 +1143,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/logout": {
+        "/users/logout": {
             "post": {
                 "security": [
                     {
@@ -1174,7 +1174,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/register": {
+        "/users/register": {
             "post": {
                 "description": "Register a new user account",
                 "consumes": [
@@ -1481,7 +1481,7 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "organization_id": {
+                "organizationId": {
                     "type": "string"
                 },
                 "updatedAt": {

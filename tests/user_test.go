@@ -8,7 +8,7 @@ import (
 	"github.com/thilak009/kong-assignment/models"
 )
 
-// TestUserRegistration tests POST /v1/user/register endpoint
+// TestUserRegistration tests POST /v1/users/register endpoint
 func TestUserRegistration(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -25,7 +25,7 @@ func TestUserRegistration(t *testing.T) {
 			"password": "password123",
 		}
 
-		resp, err := helpers.MakeRequest("POST", "/v1/user/register", payload)
+		resp, err := helpers.MakeRequest("POST", "/v1/users/register", payload)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -78,7 +78,7 @@ func TestUserRegistration(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("POST", "/v1/user/register", tc.payload)
+				resp, err := helpers.MakeRequest("POST", "/v1/users/register", tc.payload)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -97,7 +97,7 @@ func TestUserRegistration(t *testing.T) {
 			"password": "password123",
 		}
 
-		resp1, err := helpers.MakeRequest("POST", "/v1/user/register", payload1)
+		resp1, err := helpers.MakeRequest("POST", "/v1/users/register", payload1)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -110,7 +110,7 @@ func TestUserRegistration(t *testing.T) {
 			"password": "password123",
 		}
 
-		resp2, err := helpers.MakeRequest("POST", "/v1/user/register", payload2)
+		resp2, err := helpers.MakeRequest("POST", "/v1/users/register", payload2)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -120,7 +120,7 @@ func TestUserRegistration(t *testing.T) {
 	})
 }
 
-// TestUserLogin tests POST /v1/user/login endpoint
+// TestUserLogin tests POST /v1/users/login endpoint
 func TestUserLogin(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -165,7 +165,7 @@ func TestUserLogin(t *testing.T) {
 					"password": tc.password,
 				}
 
-				resp, err := helpers.MakeRequest("POST", "/v1/user/login", payload)
+				resp, err := helpers.MakeRequest("POST", "/v1/users/login", payload)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -201,7 +201,7 @@ func TestUserLogin(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeRequest("POST", "/v1/user/login", tc.payload)
+				resp, err := helpers.MakeRequest("POST", "/v1/users/login", tc.payload)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}
@@ -212,4 +212,3 @@ func TestUserLogin(t *testing.T) {
 		}
 	})
 }
-

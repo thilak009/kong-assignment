@@ -118,6 +118,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// Check if token is blacklisted
+		blacklistModel := models.BlacklistedTokenModel{}
+		tokenHash := utils.HashToken(tokenString)
+		if blacklistModel.IsBlacklisted(c.Request.Context(), tokenHash) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, models.ErrorResponse{
+				Message: "Invalid token",
+			})
+			return
+		}
+
 		// Store user info in context
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)

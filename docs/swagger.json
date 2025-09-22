@@ -1084,7 +1084,7 @@
                 }
             }
         },
-        "/user/login": {
+        "/users/login": {
             "post": {
                 "description": "Authenticate user and return JWT token",
                 "consumes": [
@@ -1137,7 +1137,7 @@
                 }
             }
         },
-        "/user/logout": {
+        "/users/logout": {
             "post": {
                 "security": [
                     {
@@ -1168,7 +1168,7 @@
                 }
             }
         },
-        "/user/register": {
+        "/users/register": {
             "post": {
                 "description": "Register a new user account",
                 "consumes": [
@@ -1475,7 +1475,7 @@
                 "name": {
                     "type": "string"
                 },
-                "organization_id": {
+                "organizationId": {
                     "type": "string"
                 },
                 "updatedAt": {

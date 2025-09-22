@@ -17,7 +17,7 @@ type Service struct {
 	BaseWithId
 	Name           string          `json:"name"`
 	Description    string          `json:"description"`
-	OrganizationID string          `json:"organization_id"`
+	OrganizationID string          `json:"organizationId"`
 	Metadata       ServiceMetadata `json:"metadata" gorm:"-"`
 	// Relationships
 	Organization Organization `json:"-" gorm:"foreignKey:OrganizationID"`

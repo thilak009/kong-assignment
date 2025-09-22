@@ -169,7 +169,7 @@ func (h *TestHelpers) CreateTestUser(email, name, password string) (*models.User
 		"password": password,
 	}
 
-	resp, err := h.MakeRequest("POST", "/v1/user/register", payload)
+	resp, err := h.MakeRequest("POST", "/v1/users/register", payload)
 	if err != nil {
 		h.t.Fatalf("Failed to register test user: %v", err)
 	}
@@ -187,7 +187,7 @@ func (h *TestHelpers) CreateTestUser(email, name, password string) (*models.User
 		"password": password,
 	}
 
-	loginResp, err := h.MakeRequest("POST", "/v1/user/login", loginPayload)
+	loginResp, err := h.MakeRequest("POST", "/v1/users/login", loginPayload)
 	if err != nil {
 		h.t.Fatalf("Failed to login test user: %v", err)
 	}

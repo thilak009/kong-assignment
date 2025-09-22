@@ -177,7 +177,7 @@ definitions:
         $ref: '#/definitions/models.ServiceMetadata'
       name:
         type: string
-      organization_id:
+      organizationId:
         type: string
       updatedAt:
         type: string
@@ -949,7 +949,7 @@ paths:
       summary: Update a version for a service
       tags:
       - ServiceVersion
-  /user/login:
+  /users/login:
     post:
       consumes:
       - application/json
@@ -984,7 +984,7 @@ paths:
       summary: Login user
       tags:
       - Authentication
-  /user/logout:
+  /users/logout:
     post:
       consumes:
       - application/json
@@ -1003,7 +1003,7 @@ paths:
       summary: Logout user
       tags:
       - Authentication
-  /user/register:
+  /users/register:
     post:
       consumes:
       - application/json

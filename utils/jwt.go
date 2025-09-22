@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -9,14 +11,14 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
+	UserID string `json:"userId"`
 	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 
-var jwtSecret = []byte(getEnv("JWT_SECRET", "your-secret-key"))
+var jwtSecret = []byte(GetEnv("JWT_SECRET", "your-secret-key"))
 
-func getEnv(key, fallback string) string {
+func GetEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
@@ -29,7 +31,7 @@ func GenerateToken(userID, email string) (string, error) {
 		UserID: userID,
 		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(60 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
@@ -54,4 +56,27 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+// GetTokenClaims extracts claims from a token without full validation (for logout)
+func GetTokenClaims(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	}, jwt.WithoutClaimsValidation())
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*Claims); ok {
+		return claims, nil
+	}
+
+	return nil, errors.New("invalid token claims")
+}
+
+// HashToken creates a SHA256 hash of the token for storage
+func HashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("%x", hash)
 }

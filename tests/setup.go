@@ -14,6 +14,7 @@ import (
 	"github.com/thilak009/kong-assignment/models"
 	"github.com/thilak009/kong-assignment/pkg/middleware"
 	"github.com/thilak009/kong-assignment/routes"
+	"github.com/thilak009/kong-assignment/utils"
 	"gorm.io/gorm"
 )
 
@@ -63,10 +64,10 @@ func teardown() {
 // setupTestDatabase initializes a test database connection using existing db package
 func setupTestDatabase() {
 	// Set test environment variables
-	os.Setenv("DB_HOST", getEnv("TEST_DB_HOST", "localhost:5433"))
-	os.Setenv("DB_USER", getEnv("TEST_DB_USER", "admin"))
-	os.Setenv("DB_PASS", getEnv("TEST_DB_PASS", "admin"))
-	os.Setenv("DB_NAME", getEnv("TEST_DB_NAME", "konnect"))
+	os.Setenv("DB_HOST", utils.GetEnv("TEST_DB_HOST", "localhost:5433"))
+	os.Setenv("DB_USER", utils.GetEnv("TEST_DB_USER", "admin"))
+	os.Setenv("DB_PASS", utils.GetEnv("TEST_DB_PASS", "admin"))
+	os.Setenv("DB_NAME", utils.GetEnv("TEST_DB_NAME", "konnect"))
 
 	// Initialize database using existing db package
 	db.Init()
@@ -100,14 +101,6 @@ func setupTestRouter() {
 
 	// Setup routes using the same function as main.go
 	routes.SetupRoutes(testRouter)
-}
-
-// getEnv gets environment variable with fallback
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
 }
 
 // GetTestDB returns the test database instance
