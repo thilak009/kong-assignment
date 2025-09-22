@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/forms"
+	"github.com/thilak009/kong-assignment/pkg/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -63,7 +65,7 @@ func GetOrganizationValidSortFields() map[string]bool {
 	return organizationValidSortFields
 }
 
-func (m OrganizationModel) Create(form forms.CreateOrganizationForm, createdBy string) (organization Organization, err error) {
+func (m OrganizationModel) Create(ctx context.Context, form forms.CreateOrganizationForm, createdBy string) (organization Organization, err error) {
 	db := db.GetDB()
 
 	// Start transaction
@@ -77,6 +79,7 @@ func (m OrganizationModel) Create(form forms.CreateOrganizationForm, createdBy s
 
 	if err := tx.Create(&organization).Error; err != nil {
 		tx.Rollback()
+		log.With(ctx).Errorf("failed to create organization :: error: %s", err.Error())
 		return Organization{}, err
 	}
 
@@ -88,6 +91,7 @@ func (m OrganizationModel) Create(form forms.CreateOrganizationForm, createdBy s
 
 	if err := tx.Create(&userOrg).Error; err != nil {
 		tx.Rollback()
+		log.With(ctx).Errorf("failed to get create user organisation map :: error: %s", err.Error())
 		return Organization{}, err
 	}
 
@@ -95,15 +99,16 @@ func (m OrganizationModel) Create(form forms.CreateOrganizationForm, createdBy s
 	return organization, nil
 }
 
-func (m OrganizationModel) One(id string) (organization Organization, isFound bool, err error) {
+func (m OrganizationModel) One(ctx context.Context, id string) (organization Organization, isFound bool, err error) {
 	db := db.GetDB()
 	if err := db.Model(&Organization{}).Where("id = ?", id).First(&organization).Error; err != nil {
+		log.With(ctx).Errorf("failed to find organization with id %s :: error: %s", id, err.Error())
 		return Organization{}, !errors.Is(err, gorm.ErrRecordNotFound), err
 	}
 	return organization, true, nil
 }
 
-func (m OrganizationModel) GetUserOrganizations(userID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[Organization], err error) {
+func (m OrganizationModel) GetUserOrganizations(ctx context.Context, userID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[Organization], err error) {
 	db := db.GetDB()
 	organizations := make([]*Organization, 0)
 
@@ -119,6 +124,7 @@ func (m OrganizationModel) GetUserOrganizations(userID string, q string, sortBy 
 	// Get total count for pagination
 	var totalCount int64
 	if err := tx.Count(&totalCount).Error; err != nil {
+		log.With(ctx).Errorf("failed to get count for pagination :: error: %s", err.Error())
 		return PaginatedResult[Organization]{}, err
 	}
 
@@ -128,16 +134,18 @@ func (m OrganizationModel) GetUserOrganizations(userID string, q string, sortBy 
 	// Pagination
 	offset := page * limit
 	if err := tx.Limit(limit).Offset(offset).Find(&organizations).Error; err != nil {
+		log.With(ctx).Errorf("failed to get organizations :: error: %s", err.Error())
 		return PaginatedResult[Organization]{}, err
 	}
 
 	return BuildPaginatedResult(organizations, totalCount, page, limit), nil
 }
 
-func (m OrganizationModel) Update(id string, form forms.CreateOrganizationForm) (organization Organization, err error) {
+func (m OrganizationModel) Update(ctx context.Context, id string, form forms.CreateOrganizationForm) (organization Organization, err error) {
 	db := db.GetDB()
 
 	if err := db.Model(&Organization{}).Where("id = ?", id).First(&organization).Error; err != nil {
+		log.With(ctx).Errorf("failed to find organization with id %s :: error: %s", id, err.Error())
 		return Organization{}, err
 	}
 
@@ -145,13 +153,14 @@ func (m OrganizationModel) Update(id string, form forms.CreateOrganizationForm) 
 	organization.Description = form.Description
 
 	if err := db.Save(&organization).Error; err != nil {
+		log.With(ctx).Errorf("failed to update organization with id %s :: error: %s", id, err.Error())
 		return Organization{}, err
 	}
 
 	return organization, nil
 }
 
-func (m OrganizationModel) Delete(id string) (err error) {
+func (m OrganizationModel) Delete(ctx context.Context, id string) (err error) {
 	db := db.GetDB()
 
 	// Start transaction
@@ -160,6 +169,7 @@ func (m OrganizationModel) Delete(id string) (err error) {
 	// TODO: figure out cascade deletes
 	// Delete user-organization relationships
 	if err := tx.Where("organization_id = ?", id).Delete(&UserOrganizationMap{}).Error; err != nil {
+		log.With(ctx).Errorf("failed to delete user organization maps for organization with id %s :: error: %s", id, err.Error())
 		tx.Rollback()
 		return err
 	}
@@ -167,6 +177,7 @@ func (m OrganizationModel) Delete(id string) (err error) {
 	services := []Service{}
 	// Delete org services
 	if err := tx.Where("organization_id = ?", id).Clauses(clause.Returning{}).Delete(&services).Error; err != nil {
+		log.With(ctx).Errorf("failed to delete services for organization with id %s :: error: %s", id, err.Error())
 		tx.Rollback()
 		return err
 	}
@@ -177,12 +188,14 @@ func (m OrganizationModel) Delete(id string) (err error) {
 	}
 	// Delete versions of the services
 	if err := tx.Where("service_id IN (?)", serviceIds).Delete(&ServiceVersion{}).Error; err != nil {
+		log.With(ctx).Errorf("failed to delete versions for services of organization with id %s :: error: %s", id, err.Error())
 		tx.Rollback()
 		return err
 	}
 
 	// Delete organization
 	if err := tx.Where("id = ?", id).Delete(&Organization{}).Error; err != nil {
+		log.With(ctx).Errorf("failed to delete organization with id %s :: error: %s", id, err.Error())
 		tx.Rollback()
 		return err
 	}
@@ -191,13 +204,15 @@ func (m OrganizationModel) Delete(id string) (err error) {
 	return nil
 }
 
-func (m OrganizationModel) IsUserMember(orgID string, userID string) (bool, error) {
+func (m OrganizationModel) IsUserMember(ctx context.Context, orgID string, userID string) (bool, error) {
 	db := db.GetDB()
 	var count int64
 
 	err := db.Model(&UserOrganizationMap{}).
 		Where("organization_id = ? AND user_id = ?", orgID, userID).
 		Count(&count).Error
-
+	if err != nil {
+		log.With(ctx).Errorf("failed to check user organization mapping for organization with id %s and user with id %s :: error: %s", orgID, userID, err.Error())
+	}
 	return count > 0, err
 }

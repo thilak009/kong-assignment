@@ -36,7 +36,7 @@ func (ctrl OrganizationController) GetOrganizations(c *gin.Context) {
 	sortBy, sort := models.ParseSortParams(c, models.GetOrganizationValidSortFields(), "updated_at")
 	page, perPage := models.ParsePaginationParams(c)
 
-	result, err := organizationModel.GetUserOrganizations(userID, q, sortBy, sort, page, perPage)
+	result, err := organizationModel.GetUserOrganizations(c.Request.Context(), userID, q, sortBy, sort, page, perPage)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to fetch organizations")
 		return
@@ -67,7 +67,7 @@ func (ctrl OrganizationController) CreateOrganization(c *gin.Context) {
 		return
 	}
 
-	organization, err := organizationModel.Create(form, userID)
+	organization, err := organizationModel.Create(c.Request.Context(), form, userID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to create organization")
 		return
@@ -95,7 +95,7 @@ func (ctrl OrganizationController) GetOrganization(c *gin.Context) {
 	orgID := c.Param("orgId")
 
 	// Check if user is member of organization
-	isMember, err := organizationModel.IsUserMember(orgID, userID)
+	isMember, err := organizationModel.IsUserMember(c.Request.Context(), orgID, userID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return
@@ -106,7 +106,7 @@ func (ctrl OrganizationController) GetOrganization(c *gin.Context) {
 		return
 	}
 
-	organization, exists, err := organizationModel.One(orgID)
+	organization, exists, err := organizationModel.One(c.Request.Context(), orgID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to fetch organization")
 		return
@@ -147,7 +147,7 @@ func (ctrl OrganizationController) UpdateOrganization(c *gin.Context) {
 	}
 
 	// Check if user is member of organization
-	isMember, err := organizationModel.IsUserMember(orgID, userID)
+	isMember, err := organizationModel.IsUserMember(c.Request.Context(), orgID, userID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return
@@ -158,7 +158,7 @@ func (ctrl OrganizationController) UpdateOrganization(c *gin.Context) {
 		return
 	}
 
-	organization, err := organizationModel.Update(orgID, form)
+	organization, err := organizationModel.Update(c.Request.Context(), orgID, form)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to update organization")
 		return
@@ -186,7 +186,7 @@ func (ctrl OrganizationController) DeleteOrganization(c *gin.Context) {
 	orgID := c.Param("orgId")
 
 	// Check if user is member of organization
-	isMember, err := organizationModel.IsUserMember(orgID, userID)
+	isMember, err := organizationModel.IsUserMember(c.Request.Context(), orgID, userID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return
@@ -197,7 +197,7 @@ func (ctrl OrganizationController) DeleteOrganization(c *gin.Context) {
 		return
 	}
 
-	err = organizationModel.Delete(orgID)
+	err = organizationModel.Delete(c.Request.Context(), orgID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to delete organization")
 		return

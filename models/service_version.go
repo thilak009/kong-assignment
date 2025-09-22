@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/forms"
+	"github.com/thilak009/kong-assignment/pkg/log"
 	"gorm.io/gorm"
 )
 
@@ -44,7 +46,7 @@ func GetServiceVersionValidSortFields() map[string]bool {
 	return serviceVersionValidSortFields
 }
 
-func (m ServiceVersionModel) Create(serviceID string, form forms.CreateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
+func (m ServiceVersionModel) Create(ctx context.Context, serviceID string, form forms.CreateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
 	db := db.GetDB()
 	serviceVersion = ServiceVersion{
 		Version:          form.Version,
@@ -53,6 +55,7 @@ func (m ServiceVersionModel) Create(serviceID string, form forms.CreateServiceVe
 		ServiceID:        serviceID,
 	}
 	if err := db.Model(&ServiceVersion{}).Create(&serviceVersion).Error; err != nil {
+		log.With(ctx).Errorf("failed to create service version for service with id %s :: error: %s", serviceID, err.Error())
 		return ServiceVersion{}, err
 	}
 	return serviceVersion, err
@@ -61,7 +64,7 @@ func (m ServiceVersionModel) Create(serviceID string, form forms.CreateServiceVe
 // returns isFound as false when there is either an error running the query or if the record is not found
 // caller must first check if err is not nil to know whether it is a record not found error
 // or some other error and not directly rely on isFound for record not found case
-func (m ServiceVersionModel) One(serviceID string, organizationID string, id string) (serviceVersion ServiceVersion, isFound bool, err error) {
+func (m ServiceVersionModel) One(ctx context.Context, serviceID string, organizationID string, id string) (serviceVersion ServiceVersion, isFound bool, err error) {
 	db := db.GetDB()
 
 	// Join with services table to ensure the service belongs to the organization
@@ -69,12 +72,13 @@ func (m ServiceVersionModel) One(serviceID string, organizationID string, id str
 		Joins("JOIN services ON service_versions.service_id = services.id").
 		Where("service_versions.service_id = ? AND service_versions.id = ? AND services.organization_id = ?", serviceID, id, organizationID).
 		First(&serviceVersion).Error; err != nil {
+		log.With(ctx).Errorf("failed to find service version with id %s for service with id %s :: error: %s", id, serviceID, err.Error())
 		return ServiceVersion{}, !errors.Is(err, gorm.ErrRecordNotFound), err
 	}
 	return serviceVersion, true, nil
 }
 
-func (m ServiceVersionModel) All(serviceID string, organizationID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[ServiceVersion], err error) {
+func (m ServiceVersionModel) All(ctx context.Context, serviceID string, organizationID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[ServiceVersion], err error) {
 	db := db.GetDB()
 	serviceVersions := make([]*ServiceVersion, 0) // Initialize as empty slice of pointers
 
@@ -91,6 +95,7 @@ func (m ServiceVersionModel) All(serviceID string, organizationID string, q stri
 	// Get total count for pagination
 	var totalCount int64
 	if err := tx.Count(&totalCount).Error; err != nil {
+		log.With(ctx).Errorf("failed to get count of service versions for service with id %s :: error: %s", serviceID, err.Error())
 		return PaginatedResult[ServiceVersion]{}, err
 	}
 
@@ -100,13 +105,14 @@ func (m ServiceVersionModel) All(serviceID string, organizationID string, q stri
 	// Pagination
 	offset := page * limit
 	if err := tx.Limit(limit).Offset(offset).Find(&serviceVersions).Error; err != nil {
+		log.With(ctx).Errorf("failed to get service versions for service with id %s :: error: %s", serviceID, err.Error())
 		return PaginatedResult[ServiceVersion]{}, err
 	}
 
 	return BuildPaginatedResult(serviceVersions, totalCount, page, limit), nil
 }
 
-func (m ServiceVersionModel) Update(serviceID string, organizationID string, id string, form forms.UpdateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
+func (m ServiceVersionModel) Update(ctx context.Context, serviceID string, organizationID string, id string, form forms.UpdateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
 	db := db.GetDB()
 
 	// First get the existing record with organization validation
@@ -114,6 +120,7 @@ func (m ServiceVersionModel) Update(serviceID string, organizationID string, id 
 		Joins("JOIN services ON service_versions.service_id = services.id").
 		Where("service_versions.service_id = ? AND service_versions.id = ? AND services.organization_id = ?", serviceID, id, organizationID).
 		First(&serviceVersion).Error; err != nil {
+		log.With(ctx).Errorf("failed to find service version with id %s for service with id %s :: error: %s", id, serviceID, err.Error())
 		return ServiceVersion{}, err
 	}
 
@@ -126,15 +133,17 @@ func (m ServiceVersionModel) Update(serviceID string, organizationID string, id 
 	}
 
 	if err := db.Save(&serviceVersion).Error; err != nil {
+		log.With(ctx).Errorf("failed to update service version with id with id %s for service with id %s :: error: %s", id, serviceID, err.Error())
 		return ServiceVersion{}, err
 	}
 	return serviceVersion, nil
 }
 
-func (m ServiceVersionModel) Delete(id string) (err error) {
+func (m ServiceVersionModel) Delete(ctx context.Context, id string) (err error) {
 	db := db.GetDB()
 
 	if err := db.Where("id = ?", id).Delete(&ServiceVersion{}).Error; err != nil {
+		log.With(ctx).Errorf("failed to delete service version with id %s :: error: %s", id, err.Error())
 		return err
 	}
 

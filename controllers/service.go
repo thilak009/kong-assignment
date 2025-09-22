@@ -40,7 +40,7 @@ func checkOrganizationAccess(c *gin.Context) (userID, orgID string, hasAccess bo
 		return userID, orgID, false
 	}
 
-	isMember, err := orgModel.IsUserMember(orgID, userID)
+	isMember, err := orgModel.IsUserMember(c.Request.Context(), orgID, userID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
 		return userID, orgID, false
@@ -82,7 +82,7 @@ func (ctrl ServiceController) CreateService(c *gin.Context) {
 		return
 	}
 
-	service, err := serviceModel.Create(form, orgID)
+	service, err := serviceModel.Create(c.Request.Context(), form, orgID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Service could not be created")
 		return
@@ -124,7 +124,7 @@ func (ctrl ServiceController) GetServices(c *gin.Context) {
 	include := c.Query("include")
 	includeVersionCount := parseIncludeParams(include)
 
-	results, err := serviceModel.All(orgID, q, sortBy, sort, page, perPage, includeVersionCount)
+	results, err := serviceModel.All(c.Request.Context(), orgID, q, sortBy, sort, page, perPage, includeVersionCount)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get services")
 		return
@@ -159,7 +159,7 @@ func (ctrl ServiceController) GetService(c *gin.Context) {
 	include := c.DefaultQuery("include", "")
 	includeVersionCount := parseIncludeParams(include)
 
-	service, isFound, err := serviceModel.One(serviceID, orgID, includeVersionCount)
+	service, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, includeVersionCount)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
@@ -203,7 +203,7 @@ func (ctrl ServiceController) UpdateService(c *gin.Context) {
 	}
 
 	serviceID := c.Param("serviceId")
-	_, isFound, err := serviceModel.One(serviceID, orgID, false)
+	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
@@ -213,7 +213,7 @@ func (ctrl ServiceController) UpdateService(c *gin.Context) {
 		return
 	}
 
-	service, err := serviceModel.Update(serviceID, orgID, form)
+	service, err := serviceModel.Update(c.Request.Context(), serviceID, orgID, form)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Service could not be updated")
 		return
@@ -243,7 +243,7 @@ func (ctrl ServiceController) DeleteService(c *gin.Context) {
 	}
 
 	serviceID := c.Param("serviceId")
-	_, isFound, err := serviceModel.One(serviceID, orgID, false)
+	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
@@ -253,7 +253,7 @@ func (ctrl ServiceController) DeleteService(c *gin.Context) {
 		return
 	}
 
-	err = serviceModel.Delete(serviceID, orgID)
+	err = serviceModel.Delete(c.Request.Context(), serviceID, orgID)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Service could not be deleted")
 		return

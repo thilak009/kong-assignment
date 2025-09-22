@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"io"
 	"log"
 	"net/http/httptest"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/thilak009/kong-assignment/db"
 	"github.com/thilak009/kong-assignment/forms"
 	"github.com/thilak009/kong-assignment/models"
+	"github.com/thilak009/kong-assignment/pkg/middleware"
 	"github.com/thilak009/kong-assignment/routes"
 	"gorm.io/gorm"
 )
@@ -81,11 +83,17 @@ func setupTestDatabase() {
 
 // setupTestRouter creates a test router reusing main.go setup
 func setupTestRouter() {
+	// Disable gin's default logging completely for tests
+	gin.DefaultWriter = io.Discard
+
 	testRouter = gin.New()
 
-	// Add basic middleware (minimal for testing)
-	testRouter.Use(gin.Logger())
+	// Add only recovery middleware, skip default logger
 	testRouter.Use(gin.Recovery())
+
+	// Add the same middleware as main.go for consistent behavior
+	testRouter.Use(middleware.RequestIDMiddleware())
+	// Note: Skip LoggingMiddleware in tests to reduce noise, but keep RequestID for context
 
 	// Use the same form validator as main app
 	binding.Validator = new(forms.DefaultValidator)

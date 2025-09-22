@@ -34,7 +34,7 @@ func (ctrl UserController) Register(c *gin.Context) {
 	}
 
 	// Check if user already exists
-	_, exists, err := userModel.FindByEmail(form.Email)
+	_, exists, err := userModel.FindByEmail(c.Request.Context(), form.Email)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to check user existence")
 		return
@@ -48,7 +48,7 @@ func (ctrl UserController) Register(c *gin.Context) {
 	}
 
 	// Create user
-	user, err := userModel.Create(form)
+	user, err := userModel.Create(c.Request.Context(), form)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Failed to create user")
 		return
@@ -78,7 +78,7 @@ func (ctrl UserController) Login(c *gin.Context) {
 	}
 
 	// Find user by email
-	user, exists, err := userModel.FindByEmail(form.Email)
+	user, exists, err := userModel.FindByEmail(c.Request.Context(), form.Email)
 	if err != nil {
 		if !exists {
 			utils.AbortWithError(c, http.StatusUnauthorized, "Invalid email/password")

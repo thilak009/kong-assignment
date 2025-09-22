@@ -45,7 +45,7 @@ func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
 	}
 
 	serviceID := c.Param("serviceId")
-	_, isFound, err := serviceModel.One(serviceID, orgID, false)
+	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
@@ -56,7 +56,7 @@ func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
 	}
 
 	// TODO: handle same version tag creation by returning a bad request maybe
-	version, err := serviceVersionModel.Create(serviceID, form)
+	version, err := serviceVersionModel.Create(c.Request.Context(), serviceID, form)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Service version could not be created")
 		return
@@ -93,7 +93,7 @@ func (ctrl ServiceVersionController) GetServiceVersions(c *gin.Context) {
 
 	serviceID := c.Param("serviceId")
 
-	_, isFound, err := serviceModel.One(serviceID, orgID, false)
+	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service not found")
@@ -106,7 +106,7 @@ func (ctrl ServiceVersionController) GetServiceVersions(c *gin.Context) {
 	sortBy, sort := models.ParseSortParams(c, models.GetServiceVersionValidSortFields(), "updated_at")
 	page, perPage := models.ParsePaginationParams(c)
 
-	versions, err := serviceVersionModel.All(serviceID, orgID, q, sortBy, sort, page, perPage)
+	versions, err := serviceVersionModel.All(c.Request.Context(), serviceID, orgID, q, sortBy, sort, page, perPage)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Could not get service versions")
 		return
@@ -140,7 +140,7 @@ func (ctrl ServiceVersionController) GetServiceVersion(c *gin.Context) {
 	serviceID := c.Param("serviceId")
 	id := c.Param("versionId")
 
-	version, isFound, err := serviceVersionModel.One(serviceID, orgID, id)
+	version, isFound, err := serviceVersionModel.One(c.Request.Context(), serviceID, orgID, id)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service version not found")
@@ -187,7 +187,7 @@ func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
 	serviceID := c.Param("serviceId")
 	id := c.Param("versionId")
 
-	_, isFound, err := serviceVersionModel.One(serviceID, orgID, id)
+	_, isFound, err := serviceVersionModel.One(c.Request.Context(), serviceID, orgID, id)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service version not found")
@@ -197,7 +197,7 @@ func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
 		return
 	}
 
-	version, err := serviceVersionModel.Update(serviceID, orgID, id, form)
+	version, err := serviceVersionModel.Update(c.Request.Context(), serviceID, orgID, id, form)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Service version could not be updated")
 		return
@@ -230,7 +230,7 @@ func (ctrl ServiceVersionController) DeleteServiceVersion(c *gin.Context) {
 	serviceID := c.Param("serviceId")
 	id := c.Param("versionId")
 
-	_, isFound, err := serviceVersionModel.One(serviceID, orgID, id)
+	_, isFound, err := serviceVersionModel.One(c.Request.Context(), serviceID, orgID, id)
 	if err != nil {
 		if !isFound {
 			utils.AbortWithError(c, http.StatusNotFound, "Service version not found")
@@ -240,7 +240,7 @@ func (ctrl ServiceVersionController) DeleteServiceVersion(c *gin.Context) {
 		return
 	}
 
-	err = serviceVersionModel.Delete(id)
+	err = serviceVersionModel.Delete(c.Request.Context(), id)
 	if err != nil {
 		utils.AbortWithError(c, http.StatusInternalServerError, "Service version could not be deleted")
 		return
