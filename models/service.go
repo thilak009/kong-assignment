@@ -13,9 +13,12 @@ import (
 
 type Service struct {
 	BaseWithId
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Metadata    ServiceMetadata `json:"metadata" gorm:"-"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	OrganizationID string          `json:"organization_id"`
+	Metadata       ServiceMetadata `json:"metadata" gorm:"-"`
+	// Relationships
+	Organization Organization `json:"-" gorm:"foreignKey:OrganizationID"`
 }
 
 type ServiceMetadata struct {
@@ -46,11 +49,12 @@ func GetServiceValidSortFields() map[string]bool {
 	return serviceValidSortFields
 }
 
-func (m ServiceModel) Create(form forms.CreateServiceForm) (service Service, err error) {
+func (m ServiceModel) Create(form forms.CreateServiceForm, organizationID string) (service Service, err error) {
 	db := db.GetDB()
 	service = Service{
-		Name:        form.Name,
-		Description: form.Description,
+		Name:           form.Name,
+		Description:    form.Description,
+		OrganizationID: organizationID,
 	}
 	if err := db.Model(&Service{}).Create(&service).Error; err != nil {
 		return Service{}, err
@@ -61,9 +65,9 @@ func (m ServiceModel) Create(form forms.CreateServiceForm) (service Service, err
 // returns isFound as false when there is either an error running the query or if the record is not found
 // caller must first check if err is not nil to know whether it is a record not found error
 // or some other error and not directly rely on isFound for record not found case
-func (m ServiceModel) One(id string, includeVersionCount bool) (service Service, isFound bool, err error) {
+func (m ServiceModel) One(id string, organizationID string, includeVersionCount bool) (service Service, isFound bool, err error) {
 	db := db.GetDB()
-	if err := db.Model(&Service{}).Where("id = ?", id).First(&service).Error; err != nil {
+	if err := db.Model(&Service{}).Where("id = ? AND organization_id = ?", id, organizationID).First(&service).Error; err != nil {
 		return Service{}, !errors.Is(err, gorm.ErrRecordNotFound), err
 	}
 
@@ -80,10 +84,10 @@ func (m ServiceModel) One(id string, includeVersionCount bool) (service Service,
 	return service, true, nil
 }
 
-func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit int, includeVersionCount bool) (result PaginatedResult[Service], err error) {
+func (m ServiceModel) All(organizationID string, q string, sortBy string, sort string, page int, limit int, includeVersionCount bool) (result PaginatedResult[Service], err error) {
 	db := db.GetDB()
 	services := make([]*Service, 0) // Initialize as empty slice of pointers
-	tx := db.Model(&Service{})
+	tx := db.Model(&Service{}).Where("organization_id = ?", organizationID)
 
 	// Search filter
 	if q != "" {
@@ -118,7 +122,7 @@ func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit 
 			ServiceID string `gorm:"column:service_id"`
 			Count     int64  `gorm:"column:count"`
 		}
-
+		// went with this approach as the API is paginated and wouldn't have too many IDs in the IN clause
 		var versionCounts []VersionCount
 		if err := db.Model(&ServiceVersion{}).
 			Select("service_id, COUNT(*) as count").
@@ -143,23 +147,35 @@ func (m ServiceModel) All(q string, sortBy string, sort string, page int, limit 
 	return BuildPaginatedResult(services, totalCount, page, limit), nil
 }
 
-func (m ServiceModel) Update(id string, form forms.CreateServiceForm) (service Service, err error) {
+func (m ServiceModel) Update(id string, organizationID string, form forms.CreateServiceForm) (service Service, err error) {
 	db := db.GetDB()
-	service = Service{
-		Name:        form.Name,
-		Description: form.Description,
+
+	// First check if service exists and belongs to organization
+	if err := db.Model(&Service{}).Where("id = ? AND organization_id = ?", id, organizationID).First(&service).Error; err != nil {
+		return Service{}, err
 	}
-	service.ID = id
-	if err := db.Model(&Service{}).Where("id = ?", id).Save(&service).Error; err != nil {
+
+	// Update the service
+	service.Name = form.Name
+	service.Description = form.Description
+
+	if err := db.Save(&service).Error; err != nil {
 		return Service{}, err
 	}
 	return service, err
 }
 
-func (m ServiceModel) Delete(id string) (err error) {
+func (m ServiceModel) Delete(id string, organizationID string) (err error) {
 	db := db.GetDB()
-	if err := db.Where("id = ?", id).Delete(&Service{}).Error; err != nil {
+	tx := db.Begin()
+	if err := tx.Where("service_id = ?", id).Delete(&ServiceVersion{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
+	if err := tx.Where("id = ? AND organization_id = ?", id, organizationID).Delete(&Service{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 	return err
 }

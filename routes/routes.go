@@ -3,28 +3,50 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/controllers"
+	"github.com/thilak009/kong-assignment/middleware"
 )
 
 // SetupRoutes configures all API routes for the given router
 func SetupRoutes(r *gin.Engine) {
 	v1 := r.Group("/v1")
 	{
-		/*** Service ***/
-		service := new(controllers.ServiceController)
+		/*** User Authentication - No auth required ***/
+		userController := new(controllers.UserController)
 
-		v1.POST("/services", service.Create)
-		v1.GET("/services", service.All)
-		v1.GET("/services/:id", service.One)
-		v1.PUT("/services/:id", service.Update)
-		v1.DELETE("/services/:id", service.Delete)
+		v1.POST("/user/register", userController.Register)
+		v1.POST("/user/login", userController.Login)
+		// v1.POST("/user/logout", userController.Logout)
 
-		/*** Service Version ***/
-		serviceVersion := new(controllers.ServiceVersionController)
+		/*** Protected routes - require authentication ***/
+		protected := v1.Group("/")
+		protected.Use(middleware.AuthMiddleware())
+		{
+			/*** Organizations ***/
+			orgController := new(controllers.OrganizationController)
 
-		v1.POST("/services/:id/versions", serviceVersion.Create)
-		v1.GET("/services/:id/versions", serviceVersion.All)
-		v1.GET("/services/:id/versions/:versionId", serviceVersion.One)
-		v1.PATCH("/services/:id/versions/:versionId", serviceVersion.Update)
-		v1.DELETE("/services/:id/versions/:versionId", serviceVersion.Delete)
+			protected.POST("/orgs", orgController.CreateOrganization)
+			protected.GET("/orgs", orgController.GetOrganizations)
+			protected.GET("/orgs/:orgId", orgController.GetOrganization)
+			protected.PUT("/orgs/:orgId", orgController.UpdateOrganization)
+			protected.DELETE("/orgs/:orgId", orgController.DeleteOrganization)
+
+			/*** Organization Services ***/
+			orgServiceController := new(controllers.ServiceController)
+
+			protected.POST("/orgs/:orgId/services", orgServiceController.CreateService)
+			protected.GET("/orgs/:orgId/services", orgServiceController.GetServices)
+			protected.GET("/orgs/:orgId/services/:serviceId", orgServiceController.GetService)
+			protected.PUT("/orgs/:orgId/services/:serviceId", orgServiceController.UpdateService)
+			protected.DELETE("/orgs/:orgId/services/:serviceId", orgServiceController.DeleteService)
+
+			/*** Organization Service Versions ***/
+			orgServiceVersionController := new(controllers.ServiceVersionController)
+
+			protected.POST("/orgs/:orgId/services/:serviceId/versions", orgServiceVersionController.CreateServiceVersion)
+			protected.GET("/orgs/:orgId/services/:serviceId/versions", orgServiceVersionController.GetServiceVersions)
+			protected.GET("/orgs/:orgId/services/:serviceId/versions/:versionId", orgServiceVersionController.GetServiceVersion)
+			protected.PATCH("/orgs/:orgId/services/:serviceId/versions/:versionId", orgServiceVersionController.UpdateServiceVersion)
+			protected.DELETE("/orgs/:orgId/services/:serviceId/versions/:versionId", orgServiceVersionController.DeleteServiceVersion)
+		}
 	}
 }

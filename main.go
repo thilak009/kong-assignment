@@ -97,7 +97,13 @@ func main() {
 	db.GetDB().Exec("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
 
 	// Run migrations
-	db.RunMigrations(&models.Service{}, &models.ServiceVersion{})
+	db.RunMigrations(
+		&models.User{},
+		&models.Organization{},
+		&models.Service{},
+		&models.ServiceVersion{},
+		&models.UserOrganizationMap{},
+	)
 
 	// Setup API routes
 	routes.SetupRoutes(r)

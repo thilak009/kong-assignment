@@ -104,10 +104,10 @@ Use the make command to generate swagger documentation if there are any changes 
 make generate_docs
 ```
 
+## Assumptions
+- Currently only the user who created the organization belongs to that org, there is no feature to invite more users.
+    - hence authorization is very basic, the user who created the org can do all operations on the org  
 
 ## TODO
-1. Search, Sort, Pagination
-2. Metadata in services APIs
-3. Tests
-4. Authentication
-5. Improve logging
+1. Tests for remaining APIs
+2. Improve logging   

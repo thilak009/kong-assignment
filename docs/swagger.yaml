@@ -1,5 +1,19 @@
 basePath: /v1
 definitions:
+  forms.CreateOrganizationForm:
+    properties:
+      description:
+        maxLength: 1000
+        minLength: 10
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+    required:
+    - description
+    - name
+    type: object
   forms.CreateServiceForm:
     properties:
       description:
@@ -28,6 +42,35 @@ definitions:
     - description
     - version
     type: object
+  forms.CreateUserForm:
+    properties:
+      email:
+        maxLength: 100
+        minLength: 3
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        maxLength: 100
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  forms.LoginForm:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
   forms.UpdateServiceVersionForm:
     properties:
       description:
@@ -46,6 +89,42 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  models.Organization:
+    properties:
+      createdAt:
+        description: |-
+          gorm:"<-:create" only allows create and read but not update
+          this is avoid updating created_at with a zero value by mistake
+        type: string
+      createdBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.PaginatedResult-models_Organization:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Organization'
+        type: array
+      meta:
+        properties:
+          currentPage:
+            type: integer
+          nextPage:
+            type: integer
+          totalCount:
+            type: integer
+          totalPages:
+            type: integer
+        type: object
     type: object
   models.PaginatedResult-models_Service:
     properties:
@@ -98,6 +177,8 @@ definitions:
         $ref: '#/definitions/models.ServiceMetadata'
       name:
         type: string
+      organization_id:
+        type: string
       updatedAt:
         type: string
     type: object
@@ -126,6 +207,22 @@ definitions:
       version:
         type: string
     type: object
+  models.User:
+    properties:
+      createdAt:
+        description: |-
+          gorm:"<-:create" only allows create and read but not update
+          this is avoid updating created_at with a zero value by mistake
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -140,12 +237,230 @@ info:
   title: Konnect
   version: "1.0"
 paths:
-  /services:
+  /orgs:
+    get:
+      consumes:
+      - application/json
+      description: Get all organizations that the authenticated user belongs to
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      - description: Sort field
+        enum:
+        - name
+        - created_at
+        - updated_at
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort
+        type: string
+      - default: 0
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginatedResult-models_Organization'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user's organizations
+      tags:
+      - Organizations
+    post:
+      consumes:
+      - application/json
+      description: Create a new organization for the authenticated user
+      parameters:
+      - description: Organization data
+        in: body
+        name: organization
+        required: true
+        schema:
+          $ref: '#/definitions/forms.CreateOrganizationForm'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Organization'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new organization
+      tags:
+      - Organizations
+  /orgs/{orgId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an organization
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete organization
+      tags:
+      - Organizations
+    get:
+      consumes:
+      - application/json
+      description: Get a specific organization by ID
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Organization'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get organization by ID
+      tags:
+      - Organizations
+    put:
+      consumes:
+      - application/json
+      description: Update an existing organization
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
+      - description: Organization update data
+        in: body
+        name: organization
+        required: true
+        schema:
+          $ref: '#/definitions/forms.CreateOrganizationForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Organization'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update organization
+      tags:
+      - Organizations
+  /orgs/{orgId}/services:
     get:
       consumes:
       - application/json
       description: Gets all the services available
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service name, supports searching the passed string in the name
           of the service
         in: query
@@ -153,11 +468,18 @@ paths:
         type: string
       - description: Sort order for the list of services. Accepted values are asc
           and desc. Default is desc(assumes default on invalid values as well)
+        enum:
+        - asc
+        - desc
         in: query
         name: sort
         type: string
       - description: The field on which sorting to be applied, supports name, created_at,
           updated_at. Default is updated_at(assumes default on invalid values as well)
+        enum:
+        - name
+        - created_at
+        - updated_at
         in: query
         name: sort_by
         type: string
@@ -182,10 +504,16 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.PaginatedResult-models_Service'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get All services
       tags:
       - Service
@@ -194,6 +522,11 @@ paths:
       - application/json
       description: Creates a service
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service
         in: body
         name: service
@@ -211,22 +544,33 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create a service
       tags:
       - Service
-  /services/{id}:
+  /orgs/{orgId}/services/{serviceId}:
     delete:
       consumes:
       - application/json
       description: Deletes the specified service
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
-        name: id
+        name: serviceId
         required: true
         type: string
       produces:
@@ -234,6 +578,10 @@ paths:
       responses:
         "204":
           description: ""
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -242,6 +590,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Delete a service
       tags:
       - Service
@@ -250,9 +600,14 @@ paths:
       - application/json
       description: Gets the specified service
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
-        name: id
+        name: serviceId
         required: true
         type: string
       - description: 'Additional data to include (comma-separated). Supported values:
@@ -267,6 +622,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.Service'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -275,6 +634,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get a service
       tags:
       - Service
@@ -283,9 +644,14 @@ paths:
       - application/json
       description: Updates the specified service
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
-        name: id
+        name: serviceId
         required: true
         type: string
       - description: Service
@@ -305,6 +671,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -313,10 +683,12 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Update a service
       tags:
       - Service
-  /services/{serviceId}/versions:
+  /orgs/{orgId}/services/{serviceId}/versions:
     get:
       consumes:
       - application/json
@@ -330,11 +702,18 @@ paths:
         type: string
       - description: Sort order for the list of service versions. Accepted values
           are asc and desc. Default is desc(assumes default on invalid values as well)
+        enum:
+        - asc
+        - desc
         in: query
         name: sort
         type: string
       - description: The field on which sorting to be applied, supports version, created_at,
           updated_at. Default is updated_at(assumes default on invalid values as well)
+        enum:
+        - version
+        - created_at
+        - updated_at
         in: query
         name: sort_by
         type: string
@@ -347,6 +726,11 @@ paths:
         in: query
         name: per_page
         type: integer
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
         name: serviceId
@@ -359,6 +743,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.PaginatedResult-models_ServiceVersion'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -367,6 +755,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get All versions of a service
       tags:
       - ServiceVersion
@@ -377,6 +767,11 @@ paths:
         Creates a version for the specified service
         version value must be a semantic version and releaseTimestamp must be valid RFC3339 timestamp
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
         name: serviceId
@@ -399,19 +794,30 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create a version for a service
       tags:
       - ServiceVersion
-  /services/{serviceId}/versions/{id}:
+  /orgs/{orgId}/services/{serviceId}/versions/{versionId}:
     delete:
       consumes:
       - application/json
       description: Deletes the specified version of a service
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
         name: serviceId
@@ -419,7 +825,7 @@ paths:
         type: string
       - description: Service Version ID
         in: path
-        name: id
+        name: versionId
         required: true
         type: string
       produces:
@@ -427,6 +833,10 @@ paths:
       responses:
         "204":
           description: ""
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -435,6 +845,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Delete a version for a service
       tags:
       - ServiceVersion
@@ -443,6 +855,11 @@ paths:
       - application/json
       description: Get particular version by id for the specified service
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
         name: serviceId
@@ -450,7 +867,7 @@ paths:
         type: string
       - description: Service Version ID
         in: path
-        name: id
+        name: versionId
         required: true
         type: string
       produces:
@@ -460,6 +877,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.ServiceVersion'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -468,6 +889,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get a version of a service
       tags:
       - ServiceVersion
@@ -477,6 +900,11 @@ paths:
       description: Updates the specified version of a service, version tag cannot
         be updated
       parameters:
+      - description: Organization ID
+        in: path
+        name: orgId
+        required: true
+        type: string
       - description: Service ID
         in: path
         name: serviceId
@@ -484,7 +912,7 @@ paths:
         type: string
       - description: Service Version ID
         in: path
-        name: id
+        name: versionId
         required: true
         type: string
       - description: ServiceVersion
@@ -504,6 +932,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -512,9 +944,99 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Update a version for a service
       tags:
       - ServiceVersion
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: User login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/forms.LoginForm'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Contains user info and JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login user
+      tags:
+      - Authentication
+  /user/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate user JWT token
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: ""
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout user
+      tags:
+      - Authentication
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user account
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/forms.CreateUserForm'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - Authentication
 securityDefinitions:
   BearerAuth:
     in: header

@@ -61,18 +61,27 @@ func (m ServiceVersionModel) Create(serviceID string, form forms.CreateServiceVe
 // returns isFound as false when there is either an error running the query or if the record is not found
 // caller must first check if err is not nil to know whether it is a record not found error
 // or some other error and not directly rely on isFound for record not found case
-func (m ServiceVersionModel) One(serviceID string, id string) (serviceVersion ServiceVersion, isFound bool, err error) {
+func (m ServiceVersionModel) One(serviceID string, organizationID string, id string) (serviceVersion ServiceVersion, isFound bool, err error) {
 	db := db.GetDB()
-	if err := db.Model(&ServiceVersion{}).Where("service_id = ? AND id = ?", serviceID, id).First(&serviceVersion).Error; err != nil {
+
+	// Join with services table to ensure the service belongs to the organization
+	if err := db.Model(&ServiceVersion{}).
+		Joins("JOIN services ON service_versions.service_id = services.id").
+		Where("service_versions.service_id = ? AND service_versions.id = ? AND services.organization_id = ?", serviceID, id, organizationID).
+		First(&serviceVersion).Error; err != nil {
 		return ServiceVersion{}, !errors.Is(err, gorm.ErrRecordNotFound), err
 	}
-	return serviceVersion, true, err
+	return serviceVersion, true, nil
 }
 
-func (m ServiceVersionModel) All(serviceID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[ServiceVersion], err error) {
+func (m ServiceVersionModel) All(serviceID string, organizationID string, q string, sortBy string, sort string, page int, limit int) (result PaginatedResult[ServiceVersion], err error) {
 	db := db.GetDB()
 	serviceVersions := make([]*ServiceVersion, 0) // Initialize as empty slice of pointers
-	tx := db.Model(&ServiceVersion{}).Where("service_id = ?", serviceID)
+
+	// Join with services table to ensure the service belongs to the organization
+	tx := db.Model(&ServiceVersion{}).
+		Joins("JOIN services ON service_versions.service_id = services.id").
+		Where("service_versions.service_id = ? AND services.organization_id = ?", serviceID, organizationID)
 
 	// Search filter
 	if q != "" {
@@ -97,11 +106,14 @@ func (m ServiceVersionModel) All(serviceID string, q string, sortBy string, sort
 	return BuildPaginatedResult(serviceVersions, totalCount, page, limit), nil
 }
 
-func (m ServiceVersionModel) Update(serviceID string, id string, form forms.UpdateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
+func (m ServiceVersionModel) Update(serviceID string, organizationID string, id string, form forms.UpdateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
 	db := db.GetDB()
 
-	// First get the existing record
-	if err := db.Model(&ServiceVersion{}).Where("service_id = ? AND id = ?", serviceID, id).First(&serviceVersion).Error; err != nil {
+	// First get the existing record with organization validation
+	if err := db.Model(&ServiceVersion{}).
+		Joins("JOIN services ON service_versions.service_id = services.id").
+		Where("service_versions.service_id = ? AND service_versions.id = ? AND services.organization_id = ?", serviceID, id, organizationID).
+		First(&serviceVersion).Error; err != nil {
 		return ServiceVersion{}, err
 	}
 
@@ -113,16 +125,18 @@ func (m ServiceVersionModel) Update(serviceID string, id string, form forms.Upda
 		serviceVersion.ReleaseTimestamp = *form.ReleaseTimestamp
 	}
 
-	if err := db.Model(&ServiceVersion{}).Where("id = ?", id).Save(&serviceVersion).Error; err != nil {
+	if err := db.Save(&serviceVersion).Error; err != nil {
 		return ServiceVersion{}, err
 	}
-	return serviceVersion, err
+	return serviceVersion, nil
 }
 
-func (m ServiceVersionModel) Delete(serviceID string, id string) (err error) {
+func (m ServiceVersionModel) Delete(id string) (err error) {
 	db := db.GetDB()
-	if err := db.Where("service_id = ? AND id = ?", serviceID, id).Delete(&ServiceVersion{}).Error; err != nil {
+
+	if err := db.Where("id = ?", id).Delete(&ServiceVersion{}).Error; err != nil {
 		return err
 	}
-	return err
+
+	return nil
 }
