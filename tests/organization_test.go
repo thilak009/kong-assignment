@@ -21,7 +21,7 @@ func TestCreateOrganization(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 
 		payload := map[string]interface{}{
 			"name":        "Test Organization",
@@ -47,7 +47,7 @@ func TestCreateOrganization(t *testing.T) {
 
 	t.Run("ValidationErrors", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 
 		testCases := []struct {
 			name         string
@@ -117,7 +117,7 @@ func TestGetOrganizations(t *testing.T) {
 
 	t.Run("EmptyList", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 
 		resp, err := helpers.MakeAuthenticatedRequest("GET", "/v1/orgs", nil, token)
 		if err != nil {
@@ -135,7 +135,7 @@ func TestGetOrganizations(t *testing.T) {
 
 	t.Run("WithData", func(t *testing.T) {
 		// Create test user and organization
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 		helpers.CreateTestOrganization(token, "Test Organization", "Test organization description")
 
 		resp, err := helpers.MakeAuthenticatedRequest("GET", "/v1/orgs", nil, token)
@@ -155,7 +155,7 @@ func TestGetOrganizations(t *testing.T) {
 
 	t.Run("WithQueryParameters", func(t *testing.T) {
 		// Create test user and organizations
-		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		helpers.CreateTestOrganization(token, "Alpha Organization", "First organization")
 		helpers.CreateTestOrganization(token, "Beta Organization", "Second organization")
 
@@ -234,7 +234,7 @@ func TestGetOrganization(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Create test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test organization description")
 
 		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s", org.ID), nil, token)
@@ -254,7 +254,7 @@ func TestGetOrganization(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 
 		nonExistentID := "non-existent-id"
 		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s", nonExistentID), nil, token)
@@ -268,11 +268,11 @@ func TestGetOrganization(t *testing.T) {
 
 	t.Run("Forbidden", func(t *testing.T) {
 		// Create first user and organization
-		_, token1 := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token1 := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		org1 := helpers.CreateTestOrganization(token1, "Test Organization 1", "Test org description")
 
 		// Create second user (different user)
-		_, token2 := helpers.CreateTestUser("test4@example.com", "Test User 4", "password123")
+		_, token2 := helpers.CreateTestUser("test4@example.com", "Test User 4", TestPassword)
 
 		// Try to access org1 using token2 (user4 is not member of org1)
 		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s", org1.ID), nil, token2)
@@ -285,7 +285,7 @@ func TestGetOrganization(t *testing.T) {
 
 	t.Run("Unauthorized", func(t *testing.T) {
 		// Create test user and organization
-		_, token := helpers.CreateTestUser("test5@example.com", "Test User 5", "password123")
+		_, token := helpers.CreateTestUser("test5@example.com", "Test User 5", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test organization description")
 
 		resp, err := helpers.MakeRequest("GET", fmt.Sprintf("/v1/orgs/%s", org.ID), nil)
@@ -309,7 +309,7 @@ func TestUpdateOrganization(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Create test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test organization description")
 
 		payload := map[string]interface{}{
@@ -333,7 +333,7 @@ func TestUpdateOrganization(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 
 		payload := map[string]interface{}{
 			"name":        "Updated Organization",
@@ -351,7 +351,7 @@ func TestUpdateOrganization(t *testing.T) {
 
 	t.Run("ValidationErrors", func(t *testing.T) {
 		// Create test user and organization
-		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test organization description")
 
 		testCases := []struct {
@@ -390,7 +390,7 @@ func TestDeleteOrganization(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Create test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test organization description")
 
 		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s", org.ID), nil, token)
@@ -411,7 +411,7 @@ func TestDeleteOrganization(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 
 		nonExistentID := "non-existent-id"
 		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s", nonExistentID), nil, token)

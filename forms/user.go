@@ -11,11 +11,11 @@ type UserForm struct{}
 type CreateUserForm struct {
 	Email    string `form:"email" json:"email" binding:"required,email,min=3,max=100"`
 	Name     string `form:"name" json:"name" binding:"required,min=2,max=100"`
-	Password string `form:"password" json:"password" binding:"required,min=8,max=100"`
+	Password string `form:"password" json:"password" binding:"required,min=8,max=100,strongpassword"`
 }
 
 type UpdateUserForm struct {
-	Password string `form:"password" json:"password" binding:"required,min=8,max=100"`
+	Password string `form:"password" json:"password" binding:"required,min=8,max=100,strongpassword"`
 }
 
 type LoginForm struct {
@@ -46,6 +46,8 @@ func (f UserForm) Password(tag string, errMsg ...string) (message string) {
 		return errMsg[0]
 	case "min", "max":
 		return "Password should be between 8 to 100 characters"
+	case "strongpassword":
+		return "Password must contain at least one uppercase letter, one lowercase letter, and one special character"
 	default:
 		return "Something went wrong, please try again later"
 	}

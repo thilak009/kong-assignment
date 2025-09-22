@@ -12,6 +12,7 @@ import (
 type OrganizationController struct{}
 
 var organizationModel = models.OrganizationModel{}
+var organizationForm = forms.OrganizationForm{}
 
 // GetOrganizations returns all organizations the user belongs to
 // @Summary Get user's organizations
@@ -63,7 +64,8 @@ func (ctrl OrganizationController) CreateOrganization(c *gin.Context) {
 	var form forms.CreateOrganizationForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		models.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
+		message := organizationForm.Create(err)
+		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 
@@ -142,7 +144,8 @@ func (ctrl OrganizationController) UpdateOrganization(c *gin.Context) {
 	var form forms.CreateOrganizationForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		models.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
+		message := organizationForm.Create(err)
+		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 

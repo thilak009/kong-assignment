@@ -22,7 +22,7 @@ func TestUserRegistration(t *testing.T) {
 		payload := map[string]interface{}{
 			"email":    "test@example.com",
 			"name":     "Test User",
-			"password": "password123",
+			"password": TestPassword,
 		}
 
 		resp, err := helpers.MakeRequest("POST", "/v1/users/register", payload)
@@ -51,12 +51,12 @@ func TestUserRegistration(t *testing.T) {
 		}{
 			{
 				name:         "Missing email",
-				payload:      map[string]interface{}{"name": "Test User", "password": "password123"},
+				payload:      map[string]interface{}{"name": "Test User", "password": TestPassword},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
 				name:         "Missing name",
-				payload:      map[string]interface{}{"email": "validation1@example.com", "password": "password123"},
+				payload:      map[string]interface{}{"email": "validation1@example.com", "password": TestPassword},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
@@ -66,12 +66,32 @@ func TestUserRegistration(t *testing.T) {
 			},
 			{
 				name:         "Invalid email format",
-				payload:      map[string]interface{}{"email": "invalid-email", "name": "Test User", "password": "password123"},
+				payload:      map[string]interface{}{"email": "invalid-email", "name": "Test User", "password": TestPassword},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
 				name:         "Empty request body",
 				payload:      map[string]interface{}{},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Password too short",
+				payload:      map[string]interface{}{"email": "validation3@example.com", "name": "Test User", "password": "Pass1!"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Password missing uppercase",
+				payload:      map[string]interface{}{"email": "validation4@example.com", "name": "Test User", "password": "password123!"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Password missing lowercase",
+				payload:      map[string]interface{}{"email": "validation5@example.com", "name": "Test User", "password": "PASSWORD123!"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Password missing special character",
+				payload:      map[string]interface{}{"email": "validation6@example.com", "name": "Test User", "password": "Password123"},
 				expectedCode: http.StatusBadRequest,
 			},
 		}
@@ -94,7 +114,7 @@ func TestUserRegistration(t *testing.T) {
 		payload1 := map[string]interface{}{
 			"email":    "duplicate@example.com",
 			"name":     "User One",
-			"password": "password123",
+			"password": TestPassword,
 		}
 
 		resp1, err := helpers.MakeRequest("POST", "/v1/users/register", payload1)
@@ -107,7 +127,7 @@ func TestUserRegistration(t *testing.T) {
 		payload2 := map[string]interface{}{
 			"email":    "duplicate@example.com",
 			"name":     "User Two",
-			"password": "password123",
+			"password": TestPassword,
 		}
 
 		resp2, err := helpers.MakeRequest("POST", "/v1/users/register", payload2)
@@ -132,14 +152,14 @@ func TestUserLogin(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Create test user
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 
 		assert.NotEmpty(t, token, "Token should not be empty")
 	})
 
 	t.Run("InvalidCredentials", func(t *testing.T) {
 		// Create test user
-		helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 
 		testCases := []struct {
 			name     string
@@ -154,7 +174,7 @@ func TestUserLogin(t *testing.T) {
 			{
 				name:     "Non-existent email",
 				email:    "nonexistent@example.com",
-				password: "password123",
+				password: TestPassword,
 			},
 		}
 
@@ -184,7 +204,7 @@ func TestUserLogin(t *testing.T) {
 		}{
 			{
 				name:         "Missing email",
-				payload:      map[string]interface{}{"password": "password123"},
+				payload:      map[string]interface{}{"password": TestPassword},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
@@ -210,5 +230,98 @@ func TestUserLogin(t *testing.T) {
 				helpers.AssertErrorResponseNotEmpty(resp)
 			})
 		}
+	})
+}
+
+// TestUserLogout tests POST /v1/users/logout endpoint
+func TestUserLogout(t *testing.T) {
+	helpers := NewTestHelpers(t)
+
+	// Clean database before and after test
+	helpers.CleanupDatabase()
+	t.Cleanup(func() {
+		helpers.CleanupDatabase()
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		// Create test user and get token
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
+
+		// Logout with valid token
+		resp, err := helpers.MakeAuthenticatedRequest("POST", "/v1/users/logout", nil, token)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp, http.StatusNoContent)
+
+		// Verify the token is blacklisted by trying to use it again
+		resp2, err := helpers.MakeAuthenticatedRequest("GET", "/v1/orgs", nil, token)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp2, http.StatusUnauthorized)
+		helpers.AssertErrorResponse(resp2, "Invalid token")
+	})
+
+	t.Run("MissingAuthorizationHeader", func(t *testing.T) {
+		// Make request without Authorization header
+		resp, err := helpers.MakeRequest("POST", "/v1/users/logout", nil)
+		if err != nil {
+			t.Fatalf("Failed to make request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp, http.StatusUnauthorized)
+		helpers.AssertErrorResponse(resp, "Authorization header required")
+	})
+
+	t.Run("InvalidAuthorizationFormat", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			token  string
+		}{
+			{
+				name:  "Malformed token",
+				token: "invalid.token.format",
+			},
+			{
+				name:  "Random string",
+				token: "completely-invalid-token",
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				resp, err := helpers.MakeAuthenticatedRequest("POST", "/v1/users/logout", nil, tc.token)
+				if err != nil {
+					t.Fatalf("Failed to make request: %v", err)
+				}
+
+				helpers.AssertStatusCode(resp, http.StatusUnauthorized)
+				helpers.AssertErrorResponse(resp, "Invalid token")
+			})
+		}
+	})
+
+	t.Run("AlreadyLoggedOutToken", func(t *testing.T) {
+		// Create test user and get token
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
+
+		// First logout - should succeed
+		resp1, err := helpers.MakeAuthenticatedRequest("POST", "/v1/users/logout", nil, token)
+		if err != nil {
+			t.Fatalf("Failed to make first logout request: %v", err)
+		}
+		helpers.AssertStatusCode(resp1, http.StatusNoContent)
+
+		// Second logout with same token - should fail
+		resp2, err := helpers.MakeAuthenticatedRequest("POST", "/v1/users/logout", nil, token)
+		if err != nil {
+			t.Fatalf("Failed to make second logout request: %v", err)
+		}
+
+		helpers.AssertStatusCode(resp2, http.StatusUnauthorized)
+		helpers.AssertErrorResponse(resp2, "Invalid token")
 	})
 }

@@ -10,7 +10,7 @@ test:
 
 test-coverage:
 	@echo -e "📊 Running tests with coverage..."
-	@go test ./tests/... -v -coverprofile=coverage.out
+	@go test ./tests/... -v -coverprofile=coverage.out -coverpkg=./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo -e "✅ Coverage report generated at coverage.html"
 

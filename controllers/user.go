@@ -13,10 +13,11 @@ import (
 type UserController struct{}
 
 var userModel = models.UserModel{}
+var userForm = forms.UserForm{}
 
 // Register creates a new user account
 // @Summary Register a new user
-// @Description Register a new user account
+// @Description Register a new user account. Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one special character.
 // @Tags Authentication
 // @Accept json
 // @Produce json
@@ -30,7 +31,8 @@ func (ctrl UserController) Register(c *gin.Context) {
 	var form forms.CreateUserForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		models.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
+		message := userForm.Create(err)
+		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 
@@ -74,7 +76,8 @@ func (ctrl UserController) Login(c *gin.Context) {
 	var form forms.LoginForm
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		models.AbortWithError(c, http.StatusBadRequest, "Invalid request data")
+		message := userForm.Create(err)
+		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}
 

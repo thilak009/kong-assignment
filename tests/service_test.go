@@ -21,7 +21,7 @@ func TestCreateService(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		payload := map[string]interface{}{
@@ -46,7 +46,7 @@ func TestCreateService(t *testing.T) {
 
 	t.Run("ValidationErrors", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		testCases := []struct {
@@ -106,7 +106,7 @@ func TestCreateService(t *testing.T) {
 
 	t.Run("Unauthorized", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		payload := map[string]interface{}{
@@ -125,11 +125,11 @@ func TestCreateService(t *testing.T) {
 
 	t.Run("Forbidden", func(t *testing.T) {
 		// Setup first user and organization
-		_, token1 := helpers.CreateTestUser("test4@example.com", "Test User 4", "password123")
+		_, token1 := helpers.CreateTestUser("test4@example.com", "Test User 4", TestPassword)
 		org1 := helpers.CreateTestOrganization(token1, "Test Organization 1", "Test org description")
 
 		// Setup second user (different user)
-		_, token2 := helpers.CreateTestUser("test5@example.com", "Test User 5", "password123")
+		_, token2 := helpers.CreateTestUser("test5@example.com", "Test User 5", TestPassword)
 
 		payload := map[string]interface{}{
 			"name":        "Test Service",
@@ -158,7 +158,7 @@ func TestGetAllServices(t *testing.T) {
 
 	t.Run("EmptyList", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services", org.ID), nil, token)
@@ -177,7 +177,7 @@ func TestGetAllServices(t *testing.T) {
 
 	t.Run("WithData", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -200,7 +200,7 @@ func TestGetAllServices(t *testing.T) {
 
 	t.Run("WithQueryParameters", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -271,7 +271,7 @@ func TestGetAllServices(t *testing.T) {
 
 	t.Run("WithIncludeVersionCount", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test4@example.com", "Test User 4", "password123")
+		_, token := helpers.CreateTestUser("test4@example.com", "Test User 4", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -306,7 +306,7 @@ func TestGetService(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -329,7 +329,7 @@ func TestGetService(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		nonExistentID := "non-existent-id"
@@ -344,7 +344,7 @@ func TestGetService(t *testing.T) {
 
 	t.Run("WithIncludeVersionCount", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -376,7 +376,7 @@ func TestUpdateService(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -404,7 +404,7 @@ func TestUpdateService(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		payload := map[string]interface{}{
@@ -423,7 +423,7 @@ func TestUpdateService(t *testing.T) {
 
 	t.Run("ValidationErrors", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", "password123")
+		_, token := helpers.CreateTestUser("test3@example.com", "Test User 3", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -469,7 +469,7 @@ func TestDeleteService(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test@example.com", "Test User", "password123")
+		_, token := helpers.CreateTestUser("test@example.com", "Test User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		// Create test service
@@ -493,7 +493,7 @@ func TestDeleteService(t *testing.T) {
 
 	t.Run("NotFound", func(t *testing.T) {
 		// Setup test user and organization
-		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", "password123")
+		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 
 		nonExistentID := "non-existent-id"

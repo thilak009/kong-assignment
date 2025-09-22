@@ -80,11 +80,13 @@ cp .env.example .env
 ```env
 ENV=LOCAL
 PORT=9000
-API_VERSION=2.0
+API_VERSION=1.0
 DB_HOST=localhost:5432
 DB_USER=your_db_user
 DB_PASS=your_db_password
 DB_NAME=konnect
+JWT_SECRET=secret-key
+TOKEN_CLEANUP_INTERVAL_MINUTES=60
 ```
 
 ### Running Locally
@@ -122,5 +124,15 @@ make generate_docs
 - Currently only the user who created the organization belongs to that org, there is no feature to invite more users.
     - hence authorization is very basic, the user who created the org can do all operations on the org  
 
+## Trade offs
+- Chose GORM's auto migrate for handling table schemas, works for most cases, no overhead, but a fully featured migration tool might be required for some setups
+
+## Some implementation details
+1. Authentication
+    - Auth is being handled by generating custom JWT tokens and token invalidation on logout is being handled by maintaining the logged out tokens in DB and deleting them after expiry using a go routine which does the cleanup
+    - Did not want to introduce redis(additional infra) for the token invalidation on logout use case, so went with postgres and a go routine which keep cleaning up a table in background
+2. Logs
+    - JSON logs as they are easy to parse and transform outside of the application
+
 ## TODO
-1. Logout API - needs persisting the tokens
+1. Unit tests - repo currently only has integration tests for APIs as it covers most of the functionality

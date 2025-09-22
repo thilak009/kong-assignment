@@ -14,6 +14,13 @@ import (
 	"github.com/thilak009/kong-assignment/models"
 )
 
+// TestPassword is a strong password that meets all validation requirements:
+// - At least 8 characters
+// - Contains uppercase letter (P)
+// - Contains lowercase letters (assword)
+// - Contains special character (!)
+const TestPassword = "Password123!"
+
 // TestHelpers provides utility functions for testing
 type TestHelpers struct {
 	t *testing.T
