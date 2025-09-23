@@ -182,3 +182,4 @@ make generate_docs
     - an incremental functionality on top of this would be separate set of permissions for users
 3. Add more logs
     - application supports log levels but currently only error logs are written in code, should also contain info and debug logs for improving logging
+    - to make the most robust use of log levels, support for changing the log level run time should be added
