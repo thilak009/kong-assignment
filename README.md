@@ -6,19 +6,22 @@ A RESTful API server for the Konnect Platform built with Go, Gin, PostgreSQL, an
 The server provides CRUD APIs for Konnect platform which contains services and versions for each service
 . It allows you to:
 
-- Create and manage services with descriptions
-- Create and manage service versions
-- Enforce unique constraints (service + version combinations)
-- Comprehensive API documentation with Swagger
+- **User Management**: Secure user registration and authentication with JWT tokens
+- **Organization Management**: Create and manage organizations with role-based access
+- **Service Management**: Create and manage services with descriptions
+- **Version Control**: Create and manage service versions
+- **API Documentation**: Comprehensive Swagger/OpenAPI documentation
+- **Testing**: Full integration test suite covering all endpoints
 
 ## Tech Stack
 
 - **Language**: Go 1.24+
-- **Web Framework**: Gin
-- **Database**: PostgreSQL
-- **ORM**: GORM (The application automatically runs database migrations on startup using GORM's AutoMigrate feature.)
+- **Web Framework**: Gin, used for the simple express style syntax which i am familiar with and find that it's easy to understand the flow
+- **Database**: PostgreSQL, general purpose :)
+- **ORM**: GORM (The application automatically runs database migrations on startup using GORM's AutoMigrate feature.), the ORM i am most familiar with, hence sticked with that, it's also widely used
 - **Documentation**: Swagger/OpenAPI
-- **Validation**: go-playground/validator
+- **Validation**: go-playground/validator (used as part of the gin framework itself, but have also used it separately before)
+- **Logging**: https://github.com/uber-go/zap, fast and zero allocation logging
 
 ## Project Structure
 
@@ -46,9 +49,17 @@ The server provides CRUD APIs for Konnect platform which contains services and v
 │   ├── organization.go # Organization form validation
 │   ├── service.go      # Service form validation
 │   ├── service_version.go # ServiceVersion form validation
-│   └── user.go         # User form validation
+│   ├── user.go         # User form validation
+│   └── validator.go    # Custom validation rules (strong password)
 ├── routes/              # Route definitions
 ├── db/                  # Database configuration and migrations
+├── tests/               # Integration tests
+│   ├── helpers.go       # Test utilities and shared constants
+│   ├── setup.go         # Test environment setup
+│   ├── user_test.go     # User authentication tests
+│   ├── organization_test.go # Organization API tests
+│   ├── service_test.go  # Service API tests
+│   └── service_version_test.go # Service version API tests
 ├── docs/                # Generated Swagger documentation
 ├── docker-compose.yml   # Docker setup
 ├── Makefile            # Build and development commands
@@ -110,6 +121,36 @@ This would download necessary packages(if not already) and start the server
 
 The server will be available at `http://localhost:9000` (default is set to 9000 in env)
 
+## Testing
+
+The project includes comprehensive integration tests covering all API endpoints.
+
+### Running Tests
+
+1. **Start test database**
+```bash
+docker-compose up -d
+```
+or start a postgres server and set `TEST_DB_HOST` env, default is `localhost:5433`
+
+2. **Run all tests**
+```bash
+go test ./tests/ -v
+```
+
+3. **Run specific test**
+```bash
+go test ./tests/ -v -run TestUserRegistration
+```
+
+### Test Structure
+- **User Tests**: Registration, login, logout with password validation
+- **Organization Tests**: CRUD operations, access control
+- **Service Tests**: Service management, query parameters, pagination
+- **Service Version Tests**: Version creation, semantic versioning validation
+
+All tests use a separate test database and include proper cleanup between test runs.
+
 ## Documentation
 
 Interactive API documentation is available at `http://localhost:9000/swagger/index.html` when the server is running.
@@ -122,7 +163,7 @@ make generate_docs
 
 ## Assumptions
 - Currently only the user who created the organization belongs to that org, there is no feature to invite more users.
-    - hence authorization is very basic, the user who created the org can do all operations on the org  
+    - hence authorization is very basic, the user who created the org can do all operations on the org, haven't considered different sets of permissions for users as of now
 
 ## Trade offs
 - Chose GORM's auto migrate for handling table schemas, works for most cases, no overhead, but a fully featured migration tool might be required for some setups
@@ -130,9 +171,11 @@ make generate_docs
 ## Some implementation details
 1. Authentication
     - Auth is being handled by generating custom JWT tokens and token invalidation on logout is being handled by maintaining the logged out tokens in DB and deleting them after expiry using a go routine which does the cleanup
-    - Did not want to introduce redis(additional infra) for the token invalidation on logout use case, so went with postgres and a go routine which keep cleaning up a table in background
+    - Did not want to introduce redis(additional infra) for the token invalidation on logout use case, so went with postgres and a go routine which keeps cleaning up the table in background
 2. Logs
     - JSON logs as they are easy to parse and transform outside of the application
 
-## TODO
+## TODO / good to have
 1. Unit tests - repo currently only has integration tests for APIs as it covers most of the functionality
+2. User invite flow - API to be able to invite user to an org
+    - an incremental functionality on top of this would be separate set of permissions for users
