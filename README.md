@@ -180,3 +180,5 @@ make generate_docs
 2. User invite flow - API to be able to invite/add user(s) to an org
     - invite links so that users can set their own password
     - an incremental functionality on top of this would be separate set of permissions for users
+3. Add more logs
+    - application supports log levels but currently only error logs are written in code, should also contain info and debug logs for improving logging

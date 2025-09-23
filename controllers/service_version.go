@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/forms"
 	"github.com/thilak009/kong-assignment/models"
+	"github.com/thilak009/kong-assignment/pkg/log"
 )
 
 type ServiceVersionController struct{}
@@ -38,6 +39,7 @@ func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
 
 	var form forms.CreateServiceVersionForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
+		log.With(c.Request.Context()).Debugf("Validation failed for service version creation: %v", validationErr)
 		message := serviceVersionForm.Create(validationErr)
 		models.AbortWithError(c, http.StatusBadRequest, message)
 		return

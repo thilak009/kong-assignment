@@ -99,7 +99,7 @@ func main() {
 
 	// Log server startup info using our logger
 	logger := log.GetLogger()
-	logger.Infof("Starting server on port %s (ENV: %s, Version: %s)", port, os.Getenv("ENV"), os.Getenv("API_VERSION"))
+	logger.Infof("Starting server on port %s (ENV: %s, Version: %s, Log Level: %s)", port, os.Getenv("ENV"), os.Getenv("API_VERSION"), os.Getenv("LOG_LEVEL"))
 
 	r.Run(":" + port)
 }

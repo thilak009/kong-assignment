@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -23,6 +25,8 @@ type Logger interface {
 	Debug(args ...interface{})
 	// Info uses fmt.Sprint to construct and log a message at INFO level
 	Info(args ...interface{})
+	// Warn uses fmt.Sprint to construct and log a message at WARN level
+	Warn(args ...interface{})
 	// Error uses fmt.Sprint to construct and log a message at ERROR level
 	Error(args ...interface{})
 
@@ -30,6 +34,8 @@ type Logger interface {
 	Debugf(format string, args ...interface{})
 	// Infof uses fmt.Sprintf to construct and log a message at INFO level
 	Infof(format string, args ...interface{})
+	// Warnf uses fmt.Sprintf to construct and log a message at WARN level
+	Warnf(format string, args ...interface{})
 	// Errorf uses fmt.Sprintf to construct and log a message at ERROR level
 	Errorf(format string, args ...interface{})
 	Json(v interface{})
@@ -60,8 +66,58 @@ func With(ctx context.Context, args ...interface{}) Logger {
 
 // New creates a new logger using the default configuration.
 func New() Logger {
-	l, _ := zap.NewProduction()
+	return NewWithLevel(getLogLevelFromEnv())
+}
+
+// NewWithLevel creates a new logger with the specified log level.
+func NewWithLevel(level zapcore.Level) Logger {
+	config := zap.NewProductionConfig()
+	config.Level = zap.NewAtomicLevelAt(level)
+
+	// For development/debug, use a more readable format
+	if level == zapcore.DebugLevel {
+		config = zap.NewDevelopmentConfig()
+		config.Level = zap.NewAtomicLevelAt(level)
+	}
+
+	l, _ := config.Build()
 	return NewWithZap(l)
+}
+
+// getLogLevelFromEnv reads the LOG_LEVEL environment variable and returns the corresponding zapcore.Level
+//
+// Log levels are hierarchical - each level includes all levels above it in severity:
+//
+// debug: Shows ALL logs (debug, info, warn, error, fatal, panic) - Most verbose
+// info:  Shows info, warn, error, fatal, panic (excludes debug) - Default level
+// warn:  Shows warn, error, fatal, panic (excludes debug, info)
+// error: Shows error, fatal, panic (excludes debug, info, warn)
+// fatal: Shows fatal, panic only (excludes debug, info, warn, error)
+// panic: Shows panic only (excludes all others) - Least verbose
+//
+// Example usage:
+// LOG_LEVEL=debug   # See everything including detailed debugging
+// LOG_LEVEL=info    # Production default - informational messages and above
+func getLogLevelFromEnv() zapcore.Level {
+	logLevel := strings.ToLower(os.Getenv("LOG_LEVEL"))
+
+	switch logLevel {
+	case "debug":
+		return zapcore.DebugLevel // Shows: debug, info, warn, error, fatal, panic
+	case "info":
+		return zapcore.InfoLevel // Shows: info, warn, error, fatal, panic
+	case "warn", "warning":
+		return zapcore.WarnLevel // Shows: warn, error, fatal, panic
+	case "error":
+		return zapcore.ErrorLevel // Shows: error, fatal, panic
+	case "fatal":
+		return zapcore.FatalLevel // Shows: fatal, panic
+	case "panic":
+		return zapcore.PanicLevel // Shows: panic only
+	default:
+		// Default to info level if not specified or invalid
+		return zapcore.InfoLevel // Shows: info, warn, error, fatal, panic
+	}
 }
 
 // NewWithZap creates a new logger using the preconfigured zap logger.
