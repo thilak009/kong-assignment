@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/thilak009/kong-assignment/models"
@@ -27,9 +26,9 @@ func TestCreateServiceVersion(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		payload := map[string]interface{}{
-			"version":          "1.0.0",
-			"description":      "Initial version of the service",
-			"releaseTimestamp": time.Now().Format(time.RFC3339),
+			"name":        "Version 1.0.0",
+			"version":     "1.0.0",
+			"description": "Initial version of the service",
 		}
 
 		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), payload, token)
@@ -43,7 +42,7 @@ func TestCreateServiceVersion(t *testing.T) {
 		helpers.AssertJSONResponse(resp, &serviceVersion)
 
 		// Validate response structure with testify
-		helpers.AssertServiceVersionFields(serviceVersion, service.ID, "1.0.0", "Initial version of the service")
+		helpers.AssertServiceVersionFields(serviceVersion, service.ID, "Version 1.0.0", "1.0.0", "Initial version of the service")
 	})
 
 	t.Run("ValidationErrors", func(t *testing.T) {
@@ -58,33 +57,43 @@ func TestCreateServiceVersion(t *testing.T) {
 			expectedCode int
 		}{
 			{
-				name:         "Missing version",
-				payload:      map[string]interface{}{"description": "Valid description with enough length"},
+				name:         "Missing name",
+				payload:      map[string]interface{}{"version": "1.0.0", "description": "Valid description with enough length"},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
-				name:         "Missing description",
-				payload:      map[string]interface{}{"version": "1.0.0"},
+				name:         "Missing version",
+				payload:      map[string]interface{}{"name": "Valid name", "description": "Valid description with enough length"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Name too short",
+				payload:      map[string]interface{}{"name": "Hi", "version": "1.0.0", "description": "Valid description with enough length"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Name too long",
+				payload:      map[string]interface{}{"name": string(make([]byte, 101)), "version": "1.0.0", "description": "Valid description with enough length"},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
 				name:         "Invalid semantic version",
-				payload:      map[string]interface{}{"version": "1.0", "description": "Valid description with enough length"},
+				payload:      map[string]interface{}{"name": "Valid name", "version": "1.0", "description": "Valid description with enough length"},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
 				name:         "Invalid semantic version format",
-				payload:      map[string]interface{}{"version": "v1.0.0", "description": "Valid description with enough length"},
+				payload:      map[string]interface{}{"name": "Valid name", "version": "v1.0.0", "description": "Valid description with enough length"},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
 				name:         "Description too short",
-				payload:      map[string]interface{}{"version": "1.0.0", "description": "Short"},
+				payload:      map[string]interface{}{"name": "Valid name", "version": "1.0.0", "description": "Short"},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
 				name:         "Description too long",
-				payload:      map[string]interface{}{"version": "1.0.0", "description": string(make([]byte, 1001))},
+				payload:      map[string]interface{}{"name": "Valid name", "version": "1.0.0", "description": string(make([]byte, 1001))},
 				expectedCode: http.StatusBadRequest,
 			},
 			{
@@ -114,9 +123,9 @@ func TestCreateServiceVersion(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		payload := map[string]interface{}{
-			"version":          "1.0.0",
-			"description":      "Initial version of the service",
-			"releaseTimestamp": time.Now().Format(time.RFC3339),
+			"name":        "Version 1.0.0",
+			"version":     "1.0.0",
+			"description": "Initial version of the service",
 		}
 
 		// Test without token
@@ -138,9 +147,9 @@ func TestCreateServiceVersion(t *testing.T) {
 		_, token2 := helpers.CreateTestUser("test5@example.com", "Test User 5", TestPassword)
 
 		payload := map[string]interface{}{
-			"version":          "1.0.0",
-			"description":      "Initial version of the service",
-			"releaseTimestamp": time.Now().Format(time.RFC3339),
+			"name":        "Version 1.0.0",
+			"version":     "1.0.0",
+			"description": "Initial version of the service",
 		}
 
 		// Try to create version in org1 service using token2 (user5 is not member of org1)
@@ -159,12 +168,12 @@ func TestCreateServiceVersion(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		// Create first version
-		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "First version")
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "First version")
 
 		payload := map[string]interface{}{
-			"version":          "1.0.0", // Same version
-			"description":      "Duplicate version attempt",
-			"releaseTimestamp": time.Now().Format(time.RFC3339),
+			"name":        "Duplicate Version",
+			"version":     "1.0.0", // Same version
+			"description": "Duplicate version attempt",
 		}
 
 		resp, err := helpers.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), payload, token)
@@ -213,7 +222,7 @@ func TestGetServiceVersions(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		// Create test version
-		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "Initial version")
 
 		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", org.ID, service.ID), nil, token)
 		if err != nil {
@@ -237,8 +246,8 @@ func TestGetServiceVersions(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		// Create test versions
-		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
-		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "2.0.0", "Major update")
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "Initial version")
+		helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 2.0.0", "2.0.0", "Major update")
 
 		testCases := []struct {
 			name       string
@@ -329,7 +338,7 @@ func TestGetServiceVersion(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		// Create test version
-		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "Initial version")
 
 		resp, err := helpers.MakeAuthenticatedRequest("GET", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), nil, token)
 		if err != nil {
@@ -380,9 +389,10 @@ func TestUpdateServiceVersion(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		// Create test version
-		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "Initial version")
 
 		payload := map[string]interface{}{
+			"name":        "Updated Version 1.0.0",
 			"description": "Updated version description",
 		}
 
@@ -396,14 +406,68 @@ func TestUpdateServiceVersion(t *testing.T) {
 		var updatedVersion models.ServiceVersion
 		helpers.AssertJSONResponse(resp, &updatedVersion)
 
+		assert.Equal(t, "Updated Version 1.0.0", updatedVersion.Name, "Name should be updated")
 		assert.Equal(t, "Updated version description", updatedVersion.Description, "Description should be updated")
 		assert.Equal(t, "1.0.0", updatedVersion.Version, "Version should remain unchanged")
 		assert.Equal(t, service.ID, updatedVersion.ServiceID, "Service ID should remain unchanged")
 	})
 
-	t.Run("NotFound", func(t *testing.T) {
+	t.Run("ValidationErrors", func(t *testing.T) {
 		// Setup test user, organization and service
 		_, token := helpers.CreateTestUser("test2@example.com", "Test User 2", TestPassword)
+		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
+		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
+
+		// Create test version
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "Initial version")
+
+		testCases := []struct {
+			name         string
+			payload      map[string]interface{}
+			expectedCode int
+		}{
+			{
+				name:         "Name too short",
+				payload:      map[string]interface{}{"name": "Hi"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Name too long",
+				payload:      map[string]interface{}{"name": string(make([]byte, 101))},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Description too short",
+				payload:      map[string]interface{}{"description": "Short"},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Description too long",
+				payload:      map[string]interface{}{"description": string(make([]byte, 1001))},
+				expectedCode: http.StatusBadRequest,
+			},
+			{
+				name:         "Empty body - no fields provided",
+				payload:      map[string]interface{}{},
+				expectedCode: http.StatusBadRequest,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				resp, err := helpers.MakeAuthenticatedRequest("PATCH", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), tc.payload, token)
+				if err != nil {
+					t.Fatalf("Failed to make request: %v", err)
+				}
+
+				helpers.AssertStatusCode(resp, tc.expectedCode)
+			})
+		}
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		// Setup test user, organization and service
+		_, token := helpers.CreateTestUser("testupdate@example.com", "Test Update User", TestPassword)
 		org := helpers.CreateTestOrganization(token, "Test Organization", "Test org description")
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
@@ -438,7 +502,7 @@ func TestDeleteServiceVersion(t *testing.T) {
 		service := helpers.CreateTestService(token, org.ID, "Test Service", "Service for version testing")
 
 		// Create test version
-		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "1.0.0", "Initial version")
+		version := helpers.CreateTestServiceVersion(token, org.ID, service.ID, "Version 1.0.0", "1.0.0", "Initial version")
 
 		resp, err := helpers.MakeAuthenticatedRequest("DELETE", fmt.Sprintf("/v1/orgs/%s/services/%s/versions/%s", org.ID, service.ID, version.ID), nil, token)
 		if err != nil {

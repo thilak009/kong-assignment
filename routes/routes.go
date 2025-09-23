@@ -38,7 +38,7 @@ func SetupRoutes(r *gin.Engine) {
 			protected.POST("/orgs/:orgId/services", orgServiceController.CreateService)
 			protected.GET("/orgs/:orgId/services", orgServiceController.GetServices)
 			protected.GET("/orgs/:orgId/services/:serviceId", orgServiceController.GetService)
-			protected.PUT("/orgs/:orgId/services/:serviceId", orgServiceController.UpdateService)
+			protected.PATCH("/orgs/:orgId/services/:serviceId", orgServiceController.UpdateService)
 			protected.DELETE("/orgs/:orgId/services/:serviceId", orgServiceController.DeleteService)
 
 			/*** Organization Service Versions ***/

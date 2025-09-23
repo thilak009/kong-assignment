@@ -17,7 +17,7 @@ var serviceVersionForm = new(forms.ServiceVersionForm)
 // @Summary Create a version for a service
 // @Schemes
 // @Description Creates a version for the specified service
-// @Description version value must be a semantic version and releaseTimestamp must be valid RFC3339 timestamp
+// @Description version value must be a semantic version
 // @Tags ServiceVersion
 // @Accept json
 // @Produce json
@@ -179,6 +179,12 @@ func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
 	var form forms.UpdateServiceVersionForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
 		message := serviceVersionForm.Update(validationErr)
+		models.AbortWithError(c, http.StatusBadRequest, message)
+		return
+	}
+
+	// Validate that at least one field is provided
+	if message := serviceVersionForm.ValidateUpdate(form); message != "" {
 		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}

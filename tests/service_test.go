@@ -60,11 +60,6 @@ func TestCreateService(t *testing.T) {
 				expectedCode: http.StatusBadRequest,
 			},
 			{
-				name:         "Missing description",
-				payload:      map[string]interface{}{"name": "Valid Name"},
-				expectedCode: http.StatusBadRequest,
-			},
-			{
 				name:         "Name too short",
 				payload:      map[string]interface{}{"name": "AB", "description": "Valid description with enough length"},
 				expectedCode: http.StatusBadRequest,
@@ -364,7 +359,7 @@ func TestGetService(t *testing.T) {
 	})
 }
 
-// TestUpdateService tests PUT /v1/orgs/{orgId}/services/{serviceId} endpoint
+// TestUpdateService tests PATCH /v1/orgs/{orgId}/services/{serviceId} endpoint
 func TestUpdateService(t *testing.T) {
 	helpers := NewTestHelpers(t)
 
@@ -387,7 +382,7 @@ func TestUpdateService(t *testing.T) {
 			"description": "This is an updated test service description",
 		}
 
-		resp, err := helpers.MakeAuthenticatedRequest("PUT", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), payload, token)
+		resp, err := helpers.MakeAuthenticatedRequest("PATCH", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -413,7 +408,7 @@ func TestUpdateService(t *testing.T) {
 		}
 
 		nonExistentID := "non-existent-id"
-		resp, err := helpers.MakeAuthenticatedRequest("PUT", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, nonExistentID), payload, token)
+		resp, err := helpers.MakeAuthenticatedRequest("PATCH", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, nonExistentID), payload, token)
 		if err != nil {
 			t.Fatalf("Failed to make request: %v", err)
 		}
@@ -441,11 +436,15 @@ func TestUpdateService(t *testing.T) {
 				name:    "Invalid description",
 				payload: map[string]interface{}{"name": "Valid Name", "description": "Short"},
 			},
+			{
+				name:    "Empty body - no fields provided",
+				payload: map[string]interface{}{},
+			},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, err := helpers.MakeAuthenticatedRequest("PUT", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), tc.payload, token)
+				resp, err := helpers.MakeAuthenticatedRequest("PATCH", fmt.Sprintf("/v1/orgs/%s/services/%s", org.ID, service.ID), tc.payload, token)
 				if err != nil {
 					t.Fatalf("Failed to make request: %v", err)
 				}

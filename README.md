@@ -162,7 +162,7 @@ make generate_docs
 ```
 
 ## Assumptions
-- Currently only the user who created the organization belongs to that org, there is no feature to invite more users.
+- Currently only the user who created the organization belongs to that org, there is no feature to invite/add more users.
     - hence authorization is very basic, the user who created the org can do all operations on the org, haven't considered different sets of permissions for users as of now
 
 ## Trade offs
@@ -175,7 +175,8 @@ make generate_docs
 2. Logs
     - JSON logs as they are easy to parse and transform outside of the application
 
-## TODO / good to have
+## Improvements
 1. Unit tests - repo currently only has integration tests for APIs as it covers most of the functionality
-2. User invite flow - API to be able to invite user to an org
+2. User invite flow - API to be able to invite/add user(s) to an org
+    - invite links so that users can set their own password
     - an incremental functionality on top of this would be separate set of permissions for users

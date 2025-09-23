@@ -15,11 +15,11 @@ import (
 
 type ServiceVersion struct {
 	BaseWithId
-	Version          string    `json:"version" gorm:"uniqueIndex:idx_service_version"`
-	Description      string    `json:"description"`
-	ReleaseTimestamp time.Time `json:"releaseTimestamp"`
-	ServiceID        string    `json:"serviceId" gorm:"uniqueIndex:idx_service_version"`
-	Service          Service   `gorm:"foreignKey:ServiceID" json:"-"`
+	Name        string `json:"name"`
+	Version     string `json:"version" gorm:"uniqueIndex:idx_service_version"`
+	Description string `json:"description"`
+	ServiceID   string `json:"serviceId" gorm:"uniqueIndex:idx_service_version"`
+	Service     Service `gorm:"foreignKey:ServiceID" json:"-"`
 }
 
 func (sv *ServiceVersion) BeforeCreate(tx *gorm.DB) (err error) {
@@ -49,10 +49,10 @@ func GetServiceVersionValidSortFields() map[string]bool {
 func (m ServiceVersionModel) Create(ctx context.Context, serviceID string, form forms.CreateServiceVersionForm) (serviceVersion ServiceVersion, err error) {
 	db := db.GetDB()
 	serviceVersion = ServiceVersion{
-		Version:          form.Version,
-		Description:      form.Description,
-		ReleaseTimestamp: form.ReleaseTimestamp,
-		ServiceID:        serviceID,
+		Name:        form.Name,
+		Version:     form.Version,
+		Description: form.Description,
+		ServiceID:   serviceID,
 	}
 	if err := db.Model(&ServiceVersion{}).Create(&serviceVersion).Error; err != nil {
 		log.With(ctx).Errorf("failed to create service version for service with id %s :: error: %s", serviceID, err.Error())
@@ -125,11 +125,11 @@ func (m ServiceVersionModel) Update(ctx context.Context, serviceID string, organ
 	}
 
 	// Update only the fields that are provided
+	if form.Name != "" {
+		serviceVersion.Name = form.Name
+	}
 	if form.Description != "" {
 		serviceVersion.Description = form.Description
-	}
-	if form.ReleaseTimestamp != nil {
-		serviceVersion.ReleaseTimestamp = *form.ReleaseTimestamp
 	}
 
 	if err := db.Save(&serviceVersion).Error; err != nil {

@@ -155,7 +155,7 @@ func (m ServiceModel) All(ctx context.Context, organizationID string, q string, 
 	return BuildPaginatedResult(services, totalCount, page, limit), nil
 }
 
-func (m ServiceModel) Update(ctx context.Context, id string, organizationID string, form forms.CreateServiceForm) (service Service, err error) {
+func (m ServiceModel) Update(ctx context.Context, id string, organizationID string, form forms.UpdateServiceForm) (service Service, err error) {
 	db := db.GetDB()
 
 	// First check if service exists and belongs to organization
@@ -164,9 +164,13 @@ func (m ServiceModel) Update(ctx context.Context, id string, organizationID stri
 		return Service{}, err
 	}
 
-	// Update the service
-	service.Name = form.Name
-	service.Description = form.Description
+	// Update only provided fields
+	if form.Name != "" {
+		service.Name = form.Name
+	}
+	if form.Description != "" {
+		service.Description = form.Description
+	}
 
 	if err := db.Save(&service).Error; err != nil {
 		log.With(ctx).Errorf("failed to update service with id %s for organization with id %s :: error: %s", id, organizationID, err.Error())

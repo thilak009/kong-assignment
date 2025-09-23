@@ -175,29 +175,35 @@ func (ctrl ServiceController) GetService(c *gin.Context) {
 // UpdateService updates a service
 // @Summary Update a service
 // @Schemes
-// @Description Updates the specified service
+// @Description Updates the specified service. Both name and description are optional.
 // @Tags Service
 // @Accept json
 // @Produce json
 // @Param orgId path string true "Organization ID"
 // @Param	serviceId	path	string	true	"Service ID"
-// @Param service body forms.CreateServiceForm true "Service"
+// @Param service body forms.UpdateServiceForm true "Service"
 // @Success 	 200  {object}  models.Service
 // @Failure      400  {object}  models.ErrorResponse
 // @Failure      403  {object}  models.ErrorResponse
 // @Failure      404  {object}  models.ErrorResponse
 // @Failure      500  {object}  models.ErrorResponse
 // @Security BearerAuth
-// @Router /orgs/{orgId}/services/{serviceId} [PUT]
+// @Router /orgs/{orgId}/services/{serviceId} [PATCH]
 func (ctrl ServiceController) UpdateService(c *gin.Context) {
 	_, orgID, hasAccess := checkOrganizationAccess(c)
 	if !hasAccess {
 		return
 	}
 
-	var form forms.CreateServiceForm
+	var form forms.UpdateServiceForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
-		message := serviceForm.Create(validationErr)
+		message := serviceForm.Update(validationErr)
+		models.AbortWithError(c, http.StatusBadRequest, message)
+		return
+	}
+
+	// Validate that at least one field is provided
+	if message := serviceForm.ValidateUpdate(form); message != "" {
 		models.AbortWithError(c, http.StatusBadRequest, message)
 		return
 	}

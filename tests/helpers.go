@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/thilak009/kong-assignment/models"
@@ -132,9 +131,10 @@ func (h *TestHelpers) AssertServiceFields(service models.Service, expectedName, 
 }
 
 // AssertServiceVersionFields validates all service version fields using testify
-func (h *TestHelpers) AssertServiceVersionFields(version models.ServiceVersion, expectedServiceID, expectedVersion, expectedDescription string) {
+func (h *TestHelpers) AssertServiceVersionFields(version models.ServiceVersion, expectedServiceID, expectedName, expectedVersion, expectedDescription string) {
 	assert.NotEmpty(h.t, version.ID, "Version ID should not be empty")
 	assert.Equal(h.t, expectedServiceID, version.ServiceID, "Service ID mismatch")
+	assert.Equal(h.t, expectedName, version.Name, "Name mismatch")
 	assert.Equal(h.t, expectedVersion, version.Version, "Version mismatch")
 	assert.Equal(h.t, expectedDescription, version.Description, "Version description mismatch")
 	assert.False(h.t, version.CreatedAt.IsZero(), "CreatedAt should not be zero")
@@ -258,13 +258,13 @@ func (h *TestHelpers) CreateTestService(token, orgID, name, description string) 
 }
 
 // CreateTestServiceVersion creates a test service version in the database
-func (h *TestHelpers) CreateTestServiceVersion(token, orgID, serviceID, version, description string) *models.ServiceVersion {
+func (h *TestHelpers) CreateTestServiceVersion(token, orgID, serviceID, name, version, description string) *models.ServiceVersion {
 	h.ensureTestEnvironment()
 
 	payload := map[string]interface{}{
-		"version":          version,
-		"description":      description,
-		"releaseTimestamp": time.Now(),
+		"name":        name,
+		"version":     version,
+		"description": description,
 	}
 
 	resp, err := h.MakeAuthenticatedRequest("POST", fmt.Sprintf("/v1/orgs/%s/services/%s/versions", orgID, serviceID), payload, token)
