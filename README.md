@@ -98,6 +98,7 @@ DB_PASS=your_db_password
 DB_NAME=konnect
 JWT_SECRET=secret-key
 TOKEN_CLEANUP_INTERVAL_MINUTES=60
+LOG_LEVEL=info
 ```
 
 ### Running Locally
