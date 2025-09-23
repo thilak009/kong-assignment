@@ -136,3 +136,43 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// OrganizationAccessMiddleware validates that the authenticated user has access to the organization
+// specified in the URL parameter 'orgId'. This middleware should be applied to routes that require
+// organization membership validation.
+//
+// Prerequisites:
+//   - AuthMiddleware must be applied before this middleware to ensure user is authenticated
+//   - Route must have 'orgId' parameter in the URL path
+//
+// On success:
+//   - Sets "user_id" and "org_id" in gin context for use by handlers
+//   - Calls c.Next() to continue to the next handler
+//
+// On failure:
+//   - Returns appropriate HTTP error response and aborts the request
+func OrganizationAccessMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := utils.GetUserID(c)
+		orgID := c.Param("orgId")
+
+		if userID == "" || orgID == "" {
+			models.AbortWithError(c, http.StatusBadRequest, "Missing user or organization information")
+			return
+		}
+
+		orgModel := models.OrganizationModel{}
+		isMember, err := orgModel.IsUserMember(c.Request.Context(), orgID, userID)
+		if err != nil {
+			models.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
+			return
+		}
+
+		if !isMember {
+			models.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
+			return
+		}
+
+		c.Next()
+	}
+}

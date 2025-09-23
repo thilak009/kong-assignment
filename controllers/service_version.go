@@ -32,10 +32,7 @@ var serviceVersionForm = new(forms.ServiceVersionForm)
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId}/versions [post]
 func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	var form forms.CreateServiceVersionForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
@@ -87,10 +84,7 @@ func (ctrl ServiceVersionController) CreateServiceVersion(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId}/versions [GET]
 func (ctrl ServiceVersionController) GetServiceVersions(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	serviceID := c.Param("serviceId")
 
@@ -133,10 +127,7 @@ func (ctrl ServiceVersionController) GetServiceVersions(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId}/versions/{versionId} [GET]
 func (ctrl ServiceVersionController) GetServiceVersion(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	serviceID := c.Param("serviceId")
 	id := c.Param("versionId")
@@ -173,10 +164,7 @@ func (ctrl ServiceVersionController) GetServiceVersion(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId}/versions/{versionId} [PATCH]
 func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	var form forms.UpdateServiceVersionForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
@@ -229,10 +217,7 @@ func (ctrl ServiceVersionController) UpdateServiceVersion(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId}/versions/{versionId} [DELETE]
 func (ctrl ServiceVersionController) DeleteServiceVersion(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	serviceID := c.Param("serviceId")
 	id := c.Param("versionId")

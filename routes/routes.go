@@ -28,27 +28,28 @@ func SetupRoutes(r *gin.Engine) {
 
 			protected.POST("/orgs", orgController.CreateOrganization)
 			protected.GET("/orgs", orgController.GetOrganizations)
-			protected.GET("/orgs/:orgId", orgController.GetOrganization)
-			protected.PUT("/orgs/:orgId", orgController.UpdateOrganization)
-			protected.DELETE("/orgs/:orgId", orgController.DeleteOrganization)
+			/*** Organization routes - require organization access ***/
+			protected.GET("/orgs/:orgId", middleware.OrganizationAccessMiddleware(), orgController.GetOrganization)
+			protected.PUT("/orgs/:orgId", middleware.OrganizationAccessMiddleware(), orgController.UpdateOrganization)
+			protected.DELETE("/orgs/:orgId", middleware.OrganizationAccessMiddleware(), orgController.DeleteOrganization)
 
-			/*** Organization Services ***/
+			/*** Organization Services - require organization access ***/
 			orgServiceController := new(controllers.ServiceController)
 
-			protected.POST("/orgs/:orgId/services", orgServiceController.CreateService)
-			protected.GET("/orgs/:orgId/services", orgServiceController.GetServices)
-			protected.GET("/orgs/:orgId/services/:serviceId", orgServiceController.GetService)
-			protected.PATCH("/orgs/:orgId/services/:serviceId", orgServiceController.UpdateService)
-			protected.DELETE("/orgs/:orgId/services/:serviceId", orgServiceController.DeleteService)
+			protected.POST("/orgs/:orgId/services", middleware.OrganizationAccessMiddleware(), orgServiceController.CreateService)
+			protected.GET("/orgs/:orgId/services", middleware.OrganizationAccessMiddleware(), orgServiceController.GetServices)
+			protected.GET("/orgs/:orgId/services/:serviceId", middleware.OrganizationAccessMiddleware(), orgServiceController.GetService)
+			protected.PATCH("/orgs/:orgId/services/:serviceId", middleware.OrganizationAccessMiddleware(), orgServiceController.UpdateService)
+			protected.DELETE("/orgs/:orgId/services/:serviceId", middleware.OrganizationAccessMiddleware(), orgServiceController.DeleteService)
 
-			/*** Organization Service Versions ***/
+			/*** Organization Service Versions - require organization access ***/
 			orgServiceVersionController := new(controllers.ServiceVersionController)
 
-			protected.POST("/orgs/:orgId/services/:serviceId/versions", orgServiceVersionController.CreateServiceVersion)
-			protected.GET("/orgs/:orgId/services/:serviceId/versions", orgServiceVersionController.GetServiceVersions)
-			protected.GET("/orgs/:orgId/services/:serviceId/versions/:versionId", orgServiceVersionController.GetServiceVersion)
-			protected.PATCH("/orgs/:orgId/services/:serviceId/versions/:versionId", orgServiceVersionController.UpdateServiceVersion)
-			protected.DELETE("/orgs/:orgId/services/:serviceId/versions/:versionId", orgServiceVersionController.DeleteServiceVersion)
+			protected.POST("/orgs/:orgId/services/:serviceId/versions", middleware.OrganizationAccessMiddleware(), orgServiceVersionController.CreateServiceVersion)
+			protected.GET("/orgs/:orgId/services/:serviceId/versions", middleware.OrganizationAccessMiddleware(), orgServiceVersionController.GetServiceVersions)
+			protected.GET("/orgs/:orgId/services/:serviceId/versions/:versionId", middleware.OrganizationAccessMiddleware(), orgServiceVersionController.GetServiceVersion)
+			protected.PATCH("/orgs/:orgId/services/:serviceId/versions/:versionId", middleware.OrganizationAccessMiddleware(), orgServiceVersionController.UpdateServiceVersion)
+			protected.DELETE("/orgs/:orgId/services/:serviceId/versions/:versionId", middleware.OrganizationAccessMiddleware(), orgServiceVersionController.DeleteServiceVersion)
 		}
 	}
 }

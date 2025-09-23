@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/thilak009/kong-assignment/forms"
 	"github.com/thilak009/kong-assignment/models"
-	"github.com/thilak009/kong-assignment/utils"
 )
 
 type ServiceController struct{}
@@ -31,28 +30,6 @@ func parseIncludeParams(include string) (includeVersionCount bool) {
 	return includeVersionCount
 }
 
-// checkOrganizationAccess checks if user has access to the organization
-func checkOrganizationAccess(c *gin.Context) (userID, orgID string, hasAccess bool) {
-	userID = utils.GetUserID(c)
-	orgID = c.Param("orgId")
-
-	if userID == "" || orgID == "" {
-		return userID, orgID, false
-	}
-
-	isMember, err := orgModel.IsUserMember(c.Request.Context(), orgID, userID)
-	if err != nil {
-		models.AbortWithError(c, http.StatusInternalServerError, "Failed to check organization access")
-		return userID, orgID, false
-	}
-
-	if !isMember {
-		models.AbortWithError(c, http.StatusForbidden, "You are not authorized to perform the request")
-		return userID, orgID, false
-	}
-
-	return userID, orgID, true
-}
 
 // CreateService creates a new service in an organization
 // @Summary Create a service
@@ -70,10 +47,7 @@ func checkOrganizationAccess(c *gin.Context) (userID, orgID string, hasAccess bo
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services [post]
 func (ctrl ServiceController) CreateService(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	var form forms.CreateServiceForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
@@ -111,10 +85,7 @@ func (ctrl ServiceController) CreateService(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services [GET]
 func (ctrl ServiceController) GetServices(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	q := c.Query("q")
 	sortBy, sort := models.ParseSortParams(c, models.GetServiceValidSortFields(), "updated_at")
@@ -150,10 +121,7 @@ func (ctrl ServiceController) GetServices(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId} [GET]
 func (ctrl ServiceController) GetService(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	serviceID := c.Param("serviceId")
 	include := c.DefaultQuery("include", "")
@@ -190,10 +158,7 @@ func (ctrl ServiceController) GetService(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId} [PATCH]
 func (ctrl ServiceController) UpdateService(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	var form forms.UpdateServiceForm
 	if validationErr := c.ShouldBindJSON(&form); validationErr != nil {
@@ -243,10 +208,7 @@ func (ctrl ServiceController) UpdateService(c *gin.Context) {
 // @Security BearerAuth
 // @Router /orgs/{orgId}/services/{serviceId} [DELETE]
 func (ctrl ServiceController) DeleteService(c *gin.Context) {
-	_, orgID, hasAccess := checkOrganizationAccess(c)
-	if !hasAccess {
-		return
-	}
+	orgID := c.Param("orgId")
 
 	serviceID := c.Param("serviceId")
 	_, isFound, err := serviceModel.One(c.Request.Context(), serviceID, orgID, false)
