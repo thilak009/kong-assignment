@@ -180,7 +180,9 @@ make generate_docs
 1. Unit tests - repo currently only has integration tests for APIs as it covers most of the functionality
 2. User invite flow - API to be able to invite/add user(s) to an org
     - invite links so that users can set their own password
-    - an incremental functionality on top of this would be separate set of permissions for users
-3. Add more logs
+3. Authorization for different sets of permissions
+    - Currently the user of an organization can do all operations on and in that organization
+    - Can add different sets of permissions like admin(can do everything), developer(cannot handle user addition etc), maintainer(can only view services etc and not create any new resources etc), just example personas that i can think of
+4. Add more logs
     - application supports log levels but currently only error logs are written in code, should also contain info and debug logs for improving logging
     - to make the most robust use of log levels, support for changing the log level run time should be added
