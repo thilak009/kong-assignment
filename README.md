@@ -1,13 +1,13 @@
 # Konnect Platform API
 
-A RESTful API server for the Konnect Platform built with Go, Gin, PostgreSQL, and GORM. This service manages services and their versions.
+A RESTful API server for the Konnect Platform built with Go, Gin, PostgreSQL, and GORM. This service manages services and their versions for organizations.
 
 ## Overview
-The server provides CRUD APIs for Konnect platform which contains services and versions for each service
+The server provides CRUD APIs for Konnect platform which contains organizations, their services and versions for each service
 . It allows you to:
 
 - **User Management**: Secure user registration and authentication with JWT tokens
-- **Organization Management**: Create and manage organizations with role-based access
+- **Organization Management**: Create and manage organizations
 - **Service Management**: Create and manage services with descriptions
 - **Version Control**: Create and manage service versions
 - **API Documentation**: Comprehensive Swagger/OpenAPI documentation
